@@ -2,6 +2,7 @@
 Composio Manager for handling tool integrations and user connections
 """
 import os
+import json
 import logging
 from typing import List, Optional, Any, Dict, Callable
 
@@ -114,11 +115,14 @@ class ComposioToolWrapper:
 
                 logger.info(f"📝 Filtered parameters: {filtered_kwargs}")
 
-                # Execute directly via composio client (NO ComposioToolSet needed)
+                # Extract toolkit name from slug
+                toolkit_name = tool_slug.split('_')[0].lower()
+
+                # Execute with toolkit version
                 result = composio_client.tools.execute(
                     slug=tool_slug,
                     user_id=entity_id,
-                    arguments=filtered_kwargs
+                    arguments=filtered_kwargs,
                 )
 
                 logger.info(f"✅ Tool {tool_slug} executed successfully")
@@ -134,12 +138,21 @@ class ComposioToolWrapper:
                 else:
                     result_data = {"result": str(result)}
 
-                # Return as string
+                # Convert to string
+
                 if isinstance(result_data, dict):
-                    import json
-                    return json.dumps(result_data, indent=2)
+                    result_str = json.dumps(result_data, indent=2)
                 else:
-                    return str(result_data)
+                    result_str = str(result_data)
+
+                # TRUNCATE if too large (limit to ~10K chars to avoid context overflow)
+                MAX_LENGTH = 10000
+                if len(result_str) > MAX_LENGTH:
+                    result_str = result_str[
+                                     :MAX_LENGTH] + f"\n\n... (truncated {len(result_str) - MAX_LENGTH} characters)"
+                    logger.warning(f"Tool output truncated from {len(result_str)} to {MAX_LENGTH} chars")
+
+                return result_str
 
             except Exception as e:
                 error_msg = str(e)
@@ -153,7 +166,6 @@ class ComposioToolWrapper:
                     "params_attempted": filtered_kwargs,
                     "success": False
                 }
-                import json
                 return json.dumps(error_response, indent=2)
 
         # Create StructuredTool with explicit name and description
@@ -176,7 +188,6 @@ class ComposioToolWrapper:
         Returns:
             Python type
         """
-        from typing import Optional, Union
 
         param_type = param_info.get('type', 'string')
 

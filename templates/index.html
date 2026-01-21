@@ -961,36 +961,90 @@ function handleWebSocketMessage(data) {
     }
 
     function addToolMessage(content, shouldSave = true) {
-        const container = document.getElementById('messagesContainer');
-        const emptyState = document.getElementById('emptyState');
-        if (emptyState) emptyState.remove();
+    const container = document.getElementById('messagesContainer');
+    const emptyState = document.getElementById('emptyState');
+    if (emptyState) emptyState.remove();
 
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'message-enter max-w-3xl mx-auto mb-6';
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message-enter max-w-3xl mx-auto mb-6';
 
-        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        messageDiv.innerHTML = `
-            <div class="flex items-start gap-3">
-                <div class="w-8 h-8 rounded-full bg-cyan-100 dark:bg-cyan-900 flex items-center justify-center flex-shrink-0">
-                    <i data-lucide="wrench" class="w-4 h-4 text-cyan-600 dark:text-cyan-300"></i>
+    // Try to parse JSON and format nicely
+    let formattedContent = content;
+    try {
+        const parsed = JSON.parse(content);
+
+        // Check if it's a Gmail result with messages
+        if (parsed.data && parsed.data.messages) {
+            formattedContent = formatGmailMessages(parsed.data.messages);
+        } else if (parsed.error) {
+            // Error response
+            formattedContent = `<div class="text-red-600 dark:text-red-400">
+                <strong>Error:</strong> ${escapeHtml(parsed.error)}
+            </div>`;
+        } else {
+            // Generic JSON formatting
+            formattedContent = `<pre class="bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto text-sm">${escapeHtml(JSON.stringify(parsed, null, 2))}</pre>`;
+        }
+    } catch (e) {
+        // Not JSON, use as-is
+        formattedContent = formatContent(content);
+    }
+
+    messageDiv.innerHTML = `
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-full bg-cyan-100 dark:bg-cyan-900 flex items-center justify-center flex-shrink-0">
+                <i data-lucide="wrench" class="w-4 h-4 text-cyan-600 dark:text-cyan-300"></i>
+            </div>
+            <div class="flex-1">
+                <div class="bg-cyan-50 dark:bg-cyan-900 border border-cyan-200 dark:border-cyan-700 rounded-2xl rounded-tl-sm px-4 py-3">
+                    <div class="text-cyan-900 dark:text-cyan-100 text-sm">${formattedContent}</div>
                 </div>
-                <div class="flex-1">
-                    <div class="bg-cyan-50 dark:bg-cyan-900 border border-cyan-200 dark:border-cyan-700 rounded-2xl rounded-tl-sm px-4 py-3">
-                        <div class="text-cyan-900 dark:text-cyan-100 font-mono text-sm">${formatContent(content)}</div>
-                    </div>
-                    <div class="text-xs text-gray-400 mt-1">${timestamp}</div>
+                <div class="text-xs text-gray-400 mt-1">${timestamp}</div>
+            </div>
+        </div>
+    `;
+
+    container.appendChild(messageDiv);
+    lucide.createIcons();
+
+    if (autoScroll) {
+        container.scrollTop = container.scrollHeight;
+    }
+}
+
+// Add this new helper function for Gmail messages
+function formatGmailMessages(messages) {
+    if (!Array.isArray(messages) || messages.length === 0) {
+        return '<p class="text-gray-500">No messages found</p>';
+    }
+
+    return messages.map((msg, idx) => {
+        // Extract text preview (strip HTML)
+        let preview = msg.messageText || '';
+        if (preview.length > 200) {
+            preview = preview.substring(0, 200) + '...';
+        }
+        // Remove HTML tags for preview
+        preview = preview.replace(/<[^>]*>/g, '').trim();
+
+        return `
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-3 mb-2 border border-gray-200 dark:border-gray-600">
+                <div class="flex justify-between items-start mb-2">
+                    <strong class="text-sm">Email ${idx + 1}</strong>
+                    <span class="text-xs text-gray-500">${msg.messageId || 'N/A'}</span>
                 </div>
+                ${msg.subject ? `<div class="text-sm font-medium mb-1">${escapeHtml(msg.subject)}</div>` : ''}
+                ${msg.from ? `<div class="text-xs text-gray-600 dark:text-gray-400 mb-1">From: ${escapeHtml(msg.from)}</div>` : ''}
+                ${msg.labelIds ? `<div class="flex flex-wrap gap-1 mb-2">
+                    ${msg.labelIds.map(label => `<span class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900 rounded">${label}</span>`).join('')}
+                </div>` : ''}
+                ${preview ? `<div class="text-xs text-gray-500 mt-2 italic">${escapeHtml(preview)}</div>` : ''}
             </div>
         `;
-
-        container.appendChild(messageDiv);
-        lucide.createIcons();
-
-        if (autoScroll) {
-            container.scrollTop = container.scrollHeight;
-        }
-    }
+    }).join('');
+}
 
     function finalizeStreamingMessage() {
         if (currentStreamingMessage) {

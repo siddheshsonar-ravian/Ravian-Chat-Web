@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Langraph Chat with Composio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        coral: '#FF8F8F',
+                        cream: '#FFF1CB',
+                        sky: '#C2E2FA',
+                        lavender: '#B7A3E3',
+                        tool: '#E0F2FE',
+                        toolDark: '#1E3A5F',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes slideIn {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes pulse-dot {
+            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .message-enter { animation: slideIn 0.3s ease-out; }
+        .typing-dot { animation: pulse-dot 1.4s infinite ease-in-out; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        * {
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .cursor-blink {
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .tool-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #0EA5E9;
+            color: white;
+        }
+    </style>
+</head>
+<body class="h-screen bg-white dark:bg-gray-900 font-sans overflow-hidden">
+<div class="fixed top-4 right-4 z-50 flex flex-col gap-2" id="toastContainer"></div>
+
+<button class="fixed top-4 left-4 z-50 lg:hidden w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex items-center justify-center"
+        id="mobileSidebarToggle">
+    <i class="w-5 h-5" data-lucide="menu"></i>
+</button>
+
+<div class="h-full flex">
+    <!-- Sidebar -->
+    <aside class="w-80 bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col fixed lg:relative h-full z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300"
+           id="sidebar">
+        <!-- Header -->
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <h1 class="text-xl font-semibold text-gray-800 dark:text-white">🤖 Composio Chat</h1>
+                <button class="w-9 h-9 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600"
+                        id="themeToggle">
+                    <i class="w-4 h-4 theme-icon" data-lucide="moon"></i>
+                </button>
+            </div>
+
+            <!-- Connection Status -->
+            <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700"
+                 id="connectionStatus">
+                <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                <span class="text-sm text-gray-600 dark:text-gray-300">Disconnected</span>
+            </div>
+        </div>
+
+        <!-- Sidebar Content -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+            <!-- Connected Apps Section -->
+            <div class="bg-white dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="w-4 h-4 text-lavender" data-lucide="puzzle"></i>
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Connected Apps</span>
+                </div>
+                <div id="connectedApps" class="text-xs text-gray-500 dark:text-gray-400">
+                    Not connected
+                </div>
+            </div>
+
+            <!-- Available Tools Section -->
+            <div class="bg-white dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="w-4 h-4 text-sky" data-lucide="wrench"></i>
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Available Tools</span>
+                </div>
+                <div id="availableTools" class="text-xs text-gray-500 dark:text-gray-400">
+                    0 tools loaded
+                </div>
+            </div>
+
+            <!-- New Chat -->
+            <button class="w-full py-2.5 px-4 rounded-lg bg-lavender text-white font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                    id="newChatBtn">
+                <i class="w-4 h-4" data-lucide="plus"></i>
+                <span>New Chat</span>
+            </button>
+
+            <!-- Client UUID -->
+            <div>
+                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Client UUID</label>
+                <div class="flex gap-2">
+                    <input class="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lavender"
+                           id="clientId"
+                           placeholder="Enter UUID..."
+                           type="text"
+                           value="test-chat-123">
+                    <button class="w-9 h-9 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center"
+                            onclick="copyClientId()">
+                        <i class="w-4 h-4" data-lucide="copy"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Connection Buttons -->
+            <div class="flex gap-2">
+                <button class="flex-1 py-2 px-4 rounded-lg bg-sky text-gray-800 font-medium hover:opacity-90 flex items-center justify-center gap-2"
+                        id="connectBtn">
+                    <i class="w-4 h-4" data-lucide="plug"></i>
+                    <span>Connect</span>
+                </button>
+                <button class="flex-1 py-2 px-4 rounded-lg bg-coral text-white font-medium hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                        disabled
+                        id="disconnectBtn">
+                    <i class="w-4 h-4" data-lucide="plug-zap"></i>
+                    <span>Disconnect</span>
+                </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                        <div class="text-lg font-bold text-lavender" id="sentCount">0</div>
+                        <div class="text-xs text-gray-500">Sent</div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold text-sky" id="receivedCount">0</div>
+                        <div class="text-xs text-gray-500">Received</div>
+                    </div>
+                    <div>
+                        <div class="text-lg font-bold text-coral" id="errorCount">0</div>
+                        <div class="text-xs text-gray-500">Errors</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+            <div class="text-xs text-gray-500 text-center">
+                <p>LangGraph + Composio Integration</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="flex-1 flex flex-col bg-white dark:bg-gray-900 h-full">
+        <!-- Chat Header -->
+        <header class="h-14 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <i class="w-5 h-5 text-sky" data-lucide="bot"></i>
+                <h2 class="text-sm font-medium text-gray-700 dark:text-gray-300">AI Assistant with Tools</h2>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="w-9 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
+                        id="clearBtn"
+                        title="Clear chat">
+                    <i class="w-4 h-4" data-lucide="trash-2"></i>
+                </button>
+                <button class="w-9 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
+                        id="exportBtn"
+                        title="Export chat">
+                    <i class="w-4 h-4" data-lucide="download"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Messages Container -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar px-6 py-8" id="messagesContainer">
+            <!-- Empty State -->
+            <div class="h-full flex flex-col items-center justify-center text-center" id="emptyState">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-lavender to-sky flex items-center justify-center mb-4">
+                    <i class="w-8 h-8 text-white" data-lucide="sparkles"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">Start a conversation</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 max-w-sm">Connect to the server and your Composio tools will be loaded automatically. Then start chatting!</p>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="hidden px-6 py-3" id="typingIndicator">
+            <div class="flex items-center gap-3 max-w-3xl mx-auto">
+                <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+                    <i class="w-4 h-4 text-gray-400" data-lucide="bot"></i>
+                </div>
+                <div class="flex gap-1">
+                    <span class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></span>
+                    <span class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></span>
+                    <span class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0">
+            <div class="max-w-3xl mx-auto">
+                <div class="flex gap-3">
+                    <textarea class="flex-1 px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-lavender min-h-[48px] max-h-32"
+                              id="messageInput"
+                              placeholder="Type your message here..."
+                              rows="1"></textarea>
+                    <button class="w-12 h-12 rounded-xl bg-lavender text-white flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                            disabled
+                            id="sendBtn">
+                        <i class="w-5 h-5" data-lucide="send"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Export Modal -->
+<div class="fixed inset-0 z-50 hidden" id="exportModal">
+    <div class="absolute inset-0 bg-black bg-opacity-50" onclick="hideExportModal()"></div>
+    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Export Chat</h3>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <button class="p-4 rounded-xl border-2 border-gray-300 dark:border-gray-600 hover:border-lavender dark:hover:border-lavender text-center"
+                        onclick="exportChat('json')">
+                    <i class="w-8 h-8 mx-auto mb-2" data-lucide="file-json"></i>
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">JSON</div>
+                </button>
+                <button class="p-4 rounded-xl border-2 border-gray-300 dark:border-gray-600 hover:border-lavender dark:hover:border-lavender text-center"
+                        onclick="exportChat('txt')">
+                    <i class="w-8 h-8 mx-auto mb-2" data-lucide="file-text"></i>
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">Text</div>
+                </button>
+            </div>
+        </div>
+        <div class="p-4 bg-gray-50 dark:bg-gray-900 flex justify-end">
+            <button class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    onclick="hideExportModal()">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let ws = null;
+    let sentCount = 0;
+    let receivedCount = 0;
+    let errorCount = 0;
+    let allMessages = [];
+    let currentTheme = localStorage.getItem('theme') || 'light';
+    let autoScroll = true;
+    let currentStreamingMessage = null;
+    let streamingAccumulator = '';
+    let connectedApps = [];
+    let toolCount = 0;
+    let currentUserId = 'default-user';
+    let currentChatId = null;
+    let allChats = [];
+
+    const API_BASE = 'http://localhost:8080/api';
+    const WS_BASE = 'ws://localhost:8080/ws';
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        lucide.createIcons();
+        initTheme();
+        initEventListeners();
+        await loadUserChats();
+        showToast('Welcome to Composio Chat!', 'info', 2000);
+    });
+
+    function initTheme() {
+        if (currentTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        }
+        updateThemeIcon();
+    }
+
+    function toggleTheme() {
+        currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.classList.toggle('dark');
+        localStorage.setItem('theme', currentTheme);
+        updateThemeIcon();
+        lucide.createIcons();
+    }
+
+    function updateThemeIcon() {
+        const icon = document.querySelector('.theme-icon');
+        if (icon) {
+            icon.setAttribute('data-lucide', currentTheme === 'light' ? 'moon' : 'sun');
+            lucide.createIcons();
+        }
+    }
+
+    function initEventListeners() {
+        document.getElementById('mobileSidebarToggle').addEventListener('click', toggleSidebar);
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        document.getElementById('newChatBtn').addEventListener('click', createNewChat);
+        document.getElementById('connectBtn').addEventListener('click', connect);
+        document.getElementById('disconnectBtn').addEventListener('click', disconnect);
+        document.getElementById('clearBtn').addEventListener('click', clearMessages);
+        document.getElementById('exportBtn').addEventListener('click', showExportModal);
+        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+
+        const messageInput = document.getElementById('messageInput');
+        messageInput.addEventListener('input', autoResize);
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    }
+
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('-translate-x-full');
+    }
+
+    function autoResize() {
+        const textarea = document.getElementById('messageInput');
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 128) + 'px';
+    }
+
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    async function loadUserChats() {
+        try {
+            const response = await fetch(`${API_BASE}/chats/user/${currentUserId}`);
+            const data = await response.json();
+            allChats = data.chats || [];
+            displayChatHistory();
+        } catch (error) {
+            console.error('Error loading chats:', error);
+            loadChatsFromLocalStorage();
+        }
+    }
+
+    function loadChatsFromLocalStorage() {
+        const stored = localStorage.getItem(`chats_${currentUserId}`);
+        if (stored) {
+            allChats = JSON.parse(stored);
+            displayChatHistory();
+        }
+    }
+
+    function saveChatsToLocalStorage() {
+        localStorage.setItem(`chats_${currentUserId}`, JSON.stringify(allChats));
+    }
+
+    function displayChatHistory() {
+        let chatSection = document.getElementById('chatHistorySection');
+
+        if (!chatSection) {
+            const sidebar = document.querySelector('.flex-1.overflow-y-auto');
+            const newSection = document.createElement('div');
+            newSection.id = 'chatHistorySection';
+            newSection.innerHTML = `
+                <div class="bg-white dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="w-4 h-4 text-lavender" data-lucide="message-square"></i>
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Chat History</span>
+                    </div>
+                    <div id="chatHistoryList" class="space-y-2 max-h-64 overflow-y-auto custom-scrollbar"></div>
+                </div>
+            `;
+            sidebar.insertBefore(newSection, sidebar.querySelector('.pt-4'));
+            lucide.createIcons();
+        }
+
+        const list = document.getElementById('chatHistoryList');
+
+        if (allChats.length === 0) {
+            list.innerHTML = '<p class="text-xs text-gray-500 dark:text-gray-400">No chats yet</p>';
+            return;
+        }
+
+        list.innerHTML = allChats.map(chat => `
+            <button
+                onclick="loadChat('${chat.id}')"
+                class="w-full text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 group transition-colors"
+            >
+                <div class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                    ${escapeHtml(chat.title)}
+                </div>
+                <div class="text-xs text-gray-500 flex justify-between mt-1">
+                    <span>${chat.message_count || 0} messages</span>
+                    <span>${formatDate(chat.updated_at)}</span>
+                </div>
+            </button>
+        `).join('');
+    }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = now - date;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+        if (days === 0) return 'Today';
+        if (days === 1) return 'Yesterday';
+        if (days < 7) return `${days}d ago`;
+        return date.toLocaleDateString();
+    }
+
+    async function createNewChat() {
+        try {
+            const chatId = generateUUID();
+            const newChat = {
+                id: chatId,
+                user_id: currentUserId,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                title: 'New Chat',
+                message_count: 0,
+                messages: []
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/chats/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: currentUserId })
+                });
+
+                if (response.ok) {
+                    const serverChat = await response.json();
+                    newChat.id = serverChat.id;
+                }
+            } catch (error) {
+                console.log('Using local storage for chat creation');
+            }
+
+            allChats.unshift(newChat);
+            saveChatsToLocalStorage();
+
+            currentChatId = newChat.id;
+            document.getElementById('clientId').value = newChat.id;
+
+            clearMessages();
+            displayChatHistory();
+
+            showToast('New chat created', 'success');
+        } catch (error) {
+            showToast('Error creating chat', 'error');
+            console.error(error);
+        }
+    }
+
+    async function loadChat(chatId) {
+        try {
+            let chat = null;
+
+            try {
+                const response = await fetch(`${API_BASE}/chats/${chatId}`);
+                if (response.ok) {
+                    chat = await response.json();
+                }
+            } catch (error) {
+                console.log('Loading chat from local storage');
+            }
+
+            if (!chat) {
+                chat = allChats.find(c => c.id === chatId);
+            }
+
+            if (!chat) {
+                showToast('Chat not found', 'error');
+                return;
+            }
+
+            currentChatId = chat.id;
+            document.getElementById('clientId').value = chat.id;
+
+            clearMessages();
+
+            if (chat.messages && chat.messages.length > 0) {
+                chat.messages.forEach(msg => {
+                    if (msg.role === 'user') {
+                        addMessage({ data: { content: msg.content, source: 'user' } }, 'sent', false);
+                    } else if (msg.role === 'assistant') {
+                        addMessage({ data: { content: msg.content, source: 'assistant' } }, 'received', false);
+                    } else if (msg.role === 'system') {
+                        addSystemMessage(msg.content, 'info', false);
+                    } else if (msg.role === 'tool') {
+                        addToolMessage(msg.content, false);
+                    }
+                });
+            }
+
+            showToast('Chat loaded', 'success', 1000);
+        } catch (error) {
+            showToast('Error loading chat', 'error');
+            console.error(error);
+        }
+    }
+
+    async function saveMessageToChat(chatId, role, content, metadata = {}) {
+        if (!chatId) return;
+
+        const message = {
+            id: generateUUID(),
+            role: role,
+            content: content,
+            timestamp: new Date().toISOString(),
+            metadata: metadata
+        };
+
+        try {
+            await fetch(`${API_BASE}/chats/${chatId}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role, content, metadata })
+            });
+        } catch (error) {
+            console.log('Saving message to local storage');
+        }
+
+        const chatIndex = allChats.findIndex(c => c.id === chatId);
+        if (chatIndex !== -1) {
+            if (!allChats[chatIndex].messages) {
+                allChats[chatIndex].messages = [];
+            }
+            allChats[chatIndex].messages.push(message);
+            allChats[chatIndex].message_count = allChats[chatIndex].messages.length;
+            allChats[chatIndex].updated_at = new Date().toISOString();
+
+            if (allChats[chatIndex].title === 'New Chat' && role === 'user') {
+                allChats[chatIndex].title = content.substring(0, 50) + (content.length > 50 ? '...' : '');
+            }
+
+            saveChatsToLocalStorage();
+            displayChatHistory();
+        }
+    }
+
+    function connect() {
+        const clientId = document.getElementById('clientId').value.trim();
+        if (!clientId) {
+            showToast('Please enter a valid UUID', 'error');
+            return;
+        }
+
+        currentChatId = clientId;
+        updateConnectionStatus('connecting', 'Connecting...');
+
+        const url = `${WS_BASE}/chat/${clientId}`;
+        ws = new WebSocket(url);
+
+        ws.onopen = () => {
+            updateConnectionStatus('connected', 'Connected');
+            document.getElementById('connectBtn').disabled = true;
+            document.getElementById('disconnectBtn').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            showToast('Connected successfully', 'success');
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            } catch (error) {
+                console.error('Error parsing message:', error);
+                errorCount++;
+                updateStats();
+            }
+        };
+
+        ws.onclose = () => {
+            updateConnectionStatus('disconnected', 'Disconnected');
+            document.getElementById('connectBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = true;
+            document.getElementById('sendBtn').disabled = true;
+            showToast('Connection closed', 'warning');
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            errorCount++;
+            updateStats();
+            showToast('Connection error', 'error');
+        };
+    }
+
+    function disconnect() {
+        if (ws) {
+            ws.close();
+        }
+    }
+
+function handleWebSocketMessage(data) {
+    console.log('Received:', data);
+
+    switch(data.type) {
+        case 'system':
+            handleSystemMessage(data);
+            break;
+        case 'stream':
+            document.getElementById('typingIndicator').classList.add('hidden');
+            handleStreamingMessage(data);
+            break;
+
+        case 'message':
+    document.getElementById('typingIndicator').classList.add('hidden');
+
+    if (data.data && data.data.source === 'user') {
+        // User messages are already handled in sendMessage()
+        // Backend is echoing it back, but we ignore it
+    } else if (data.data && data.data.source === 'system') {
+        addSystemMessage(data.data.content);
+    } else if (data.data && data.data.source === 'tool') {
+        const toolContent = data.data.content;
+        addToolMessage(toolContent);
+        if (currentChatId) {
+            saveMessageToChat(currentChatId, 'tool', toolContent);
+        }
+    } else if (data.data && data.data.source === 'assistant') {
+        // Handle assistant messages
+        if (data.data.complete) {
+            // Finalize streaming and save to chat history
+            if (streamingAccumulator) {
+                if (currentChatId) {
+                    saveMessageToChat(currentChatId, 'assistant', streamingAccumulator);
+                }
+                finalizeStreamingMessage();
+            } else {
+                // No streaming happened, this is a direct complete message
+                // (shouldn't happen in your flow, but just in case)
+                if (data.data.content) {
+                    addMessage(data, 'received');
+                    if (currentChatId) {
+                        saveMessageToChat(currentChatId, 'assistant', data.data.content);
+                    }
+                }
+            }
+        } else {
+            // Non-complete assistant message without streaming
+            // This shouldn't happen in your current flow either
+            addMessage(data, 'received');
+        }
+    } else {
+        // Fallback for any other messages
+        receivedCount++;
+        updateStats();
+        addMessage(data, 'received');
+    }
+    break;
+
+        case 'completion':
+            handleCompletionMessage(data);
+            break;
+        case 'error':
+            errorCount++;
+            updateStats();
+            showToast(data.message || 'An error occurred', 'error');
+            addSystemMessage(`❌ Error: ${data.message}`, 'error');
+            break;
+        case 'pong':
+            break;
+    }
+}
+
+    function handleStreamingMessage(data) {
+        const content = data.data?.content || '';
+
+        if (!currentStreamingMessage) {
+            const container = document.getElementById('messagesContainer');
+            const emptyState = document.getElementById('emptyState');
+            if (emptyState) emptyState.remove();
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message-enter max-w-3xl mx-auto mb-6';
+            messageDiv.id = 'streaming-message-container';
+
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            messageDiv.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full bg-sky flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="bot" class="w-4 h-4 text-gray-700"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3">
+                            <div class="text-gray-800 dark:text-gray-200 message-content"></div>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">${timestamp}</div>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(messageDiv);
+            lucide.createIcons();
+            currentStreamingMessage = messageDiv.querySelector('.message-content');
+            streamingAccumulator = '';
+            receivedCount++;
+            updateStats();
+        }
+
+        if (currentStreamingMessage && content) {
+            streamingAccumulator += content;
+            currentStreamingMessage.innerHTML = formatContent(streamingAccumulator) + '<span class="cursor-blink">|</span>';
+
+            if (autoScroll) {
+                const container = document.getElementById('messagesContainer');
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+    }
+
+    function handleSystemMessage(data) {
+        const content = data.status === 'connected' ? 'Connected to server' : data.status;
+
+        if (content && typeof content === 'string') {
+            addSystemMessage(content);
+
+            if (content.includes('Connected apps:')) {
+                const match = content.match(/Connected apps: (.*?) \((\d+) tools/);
+                if (match) {
+                    connectedApps = match[1].split(', ');
+                    toolCount = parseInt(match[2]);
+                    updateComposioInfo();
+                }
+            } else if (content.includes('No connected apps')) {
+                connectedApps = [];
+                toolCount = 0;
+                updateComposioInfo();
+            }
+        }
+    }
+
+    function handleCompletionMessage(data) {
+        if (currentStreamingMessage) {
+            finalizeStreamingMessage();
+        }
+
+        const status = data.status || 'complete';
+        const reason = data.reason || '';
+
+        if (status === 'stopped' || status === 'cancelled') {
+            addSystemMessage(`⏹️ ${status.charAt(0).toUpperCase() + status.slice(1)}${reason ? ': ' + reason : ''}`, 'warning');
+        }
+    }
+
+    function updateConnectionStatus(status, text) {
+        const statusEl = document.getElementById('connectionStatus');
+        const colors = {
+            'connected': 'bg-green-500',
+            'connecting': 'bg-yellow-500',
+            'disconnected': 'bg-red-500'
+        };
+
+        statusEl.innerHTML = `
+            <div class="w-2 h-2 rounded-full ${colors[status] || 'bg-red-500'}"></div>
+            <span class="text-sm text-gray-600 dark:text-gray-300">${text}</span>
+        `;
+    }
+
+    function updateComposioInfo() {
+        const appsEl = document.getElementById('connectedApps');
+        const toolsEl = document.getElementById('availableTools');
+
+        if (connectedApps.length > 0) {
+            appsEl.innerHTML = connectedApps.map(app =>
+                `<span class="inline-block bg-lavender text-white text-xs px-2 py-1 rounded mt-1 mr-1">${app}</span>`
+            ).join('');
+            toolsEl.textContent = `${toolCount} tools loaded`;
+        } else {
+            appsEl.textContent = 'No apps connected';
+            toolsEl.textContent = '0 tools loaded';
+        }
+    }
+
+    function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const content = input.value.trim();
+
+    if (!content) return;
+
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        showToast('Not connected to server', 'error');
+        return;
+    }
+
+    try {
+        const messageData = {
+            type: "start",
+            task: content,
+            files: []
+        };
+
+        // Add user message to UI ONCE
+        addMessage({
+            data: {
+                content: content,
+                source: 'user'
+            }
+        }, 'sent');
+
+        ws.send(JSON.stringify(messageData));
+        sentCount++;
+        updateStats();
+
+        if (currentChatId) {
+            saveMessageToChat(currentChatId, 'user', content);
+        }
+
+        document.getElementById('typingIndicator').classList.remove('hidden');
+
+        input.value = '';
+        autoResize();
+        showToast('Message sent', 'success', 1000);
+    } catch (e) {
+        showToast(`Error: ${e.message}`, 'error');
+    }
+}
+
+    function addMessage(data, type, shouldSave = true) {
+        const container = document.getElementById('messagesContainer');
+        const emptyState = document.getElementById('emptyState');
+
+        if (emptyState) {
+            emptyState.remove();
+        }
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message-enter max-w-3xl mx-auto mb-6';
+
+        const isUser = type === 'sent' || (data.data && data.data.source === 'user');
+        const content = extractMessageContent(data);
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        if (isUser) {
+            messageDiv.innerHTML = `
+                <div class="flex items-start gap-3 flex-row-reverse">
+                    <div class="w-8 h-8 rounded-full bg-lavender flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="user" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="bg-lavender bg-opacity-10 dark:bg-opacity-20 rounded-2xl rounded-tr-sm px-4 py-3">
+                            <div class="text-gray-800 dark:text-gray-200">${formatContent(content)}</div>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1 text-right">${timestamp}</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            messageDiv.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full bg-sky flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="bot" class="w-4 h-4 text-gray-700"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3">
+                            <div class="text-gray-800 dark:text-gray-200 message-content">${formatContent(content)}</div>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">${timestamp}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        container.appendChild(messageDiv);
+        lucide.createIcons();
+
+        if (autoScroll) {
+            container.scrollTop = container.scrollHeight;
+        }
+
+        allMessages.push({ data, type, timestamp: Date.now() });
+    }
+
+    function addSystemMessage(content, level = 'info', shouldSave = true) {
+        const container = document.getElementById('messagesContainer');
+        const emptyState = document.getElementById('emptyState');
+        if (emptyState) emptyState.remove();
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message-enter max-w-3xl mx-auto mb-4';
+
+        const colors = {
+            'info': 'bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-700',
+            'warning': 'bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700',
+            'error': 'bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-200 dark:border-red-700',
+            'success': 'bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700'
+        };
+
+        messageDiv.innerHTML = `
+            <div class="rounded-lg border px-4 py-3 text-sm ${colors[level] || colors.info}">
+                ${formatContent(content)}
+            </div>
+        `;
+
+        container.appendChild(messageDiv);
+        if (autoScroll) container.scrollTop = container.scrollHeight;
+    }
+
+    function addToolMessage(content, shouldSave = true) {
+        const container = document.getElementById('messagesContainer');
+        const emptyState = document.getElementById('emptyState');
+        if (emptyState) emptyState.remove();
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message-enter max-w-3xl mx-auto mb-6';
+
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        messageDiv.innerHTML = `
+            <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-cyan-100 dark:bg-cyan-900 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="wrench" class="w-4 h-4 text-cyan-600 dark:text-cyan-300"></i>
+                </div>
+                <div class="flex-1">
+                    <div class="bg-cyan-50 dark:bg-cyan-900 border border-cyan-200 dark:border-cyan-700 rounded-2xl rounded-tl-sm px-4 py-3">
+                        <div class="text-cyan-900 dark:text-cyan-100 font-mono text-sm">${formatContent(content)}</div>
+                    </div>
+                    <div class="text-xs text-gray-400 mt-1">${timestamp}</div>
+                </div>
+            </div>
+        `;
+
+        container.appendChild(messageDiv);
+        lucide.createIcons();
+
+        if (autoScroll) {
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+
+    function finalizeStreamingMessage() {
+        if (currentStreamingMessage) {
+            const cursor = currentStreamingMessage.querySelector('.cursor-blink');
+            if (cursor) cursor.remove();
+
+            const messageContainer = document.getElementById('streaming-message-container');
+            if (messageContainer) {
+                allMessages.push({
+                    data: { data: { content: streamingAccumulator, source: 'assistant' } },
+                    type: 'received',
+                    timestamp: Date.now()
+                });
+
+                messageContainer.removeAttribute('id');
+            }
+
+            currentStreamingMessage = null;
+            streamingAccumulator = '';
+        }
+    }
+
+    function extractMessageContent(data) {
+        if (typeof data === 'string') return data;
+        if (data.task) return data.task;
+        if (data.message) return data.message;
+
+        if (data.data) {
+            if (data.data.content) {
+                if (typeof data.data.content === 'string') {
+                    try {
+                        return JSON.parse(data.data.content);
+                    } catch {
+                        return data.data.content;
+                    }
+                }
+                return data.data.content;
+            }
+            return data.data;
+        }
+
+        return data;
+    }
+
+    function formatContent(content) {
+        if (typeof content === 'string') {
+            let html = escapeHtml(content);
+
+            html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                return `<pre class="bg-gray-900 text-gray-100 p-3 rounded-lg mt-2 mb-2 overflow-x-auto text-sm"><code>${escapeHtml(code.trim())}</code></pre>`;
+            });
+
+            html = html.replace(/`([^`]+)`/g, '<code class="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>');
+
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+            html = html.replace(/\n/g, '<br>');
+
+            return html;
+        } else if (typeof content === 'object' && content !== null) {
+            return formatObjectAsCard(content);
+        }
+
+        return escapeHtml(String(content));
+    }
+
+    function formatObjectAsCard(obj) {
+        let html = '<div class="bg-white dark:bg-gray-700 rounded-lg p-3 space-y-2 text-sm border border-gray-200 dark:border-gray-600">';
+
+        for (const [key, value] of Object.entries(obj)) {
+            if (key === 'timestamp' || key === 'type') continue;
+
+            html += '<div class="flex gap-2">';
+            html += `<span class="font-medium text-gray-600 dark:text-gray-400 min-w-[80px]">${escapeHtml(key)}:</span>`;
+
+            if (typeof value === 'object' && value !== null) {
+                html += `<span class="text-gray-800 dark:text-gray-200 flex-1">${JSON.stringify(value)}</span>`;
+            } else {
+                html += `<span class="text-gray-800 dark:text-gray-200 flex-1">${escapeHtml(String(value))}</span>`;
+            }
+
+            html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function clearMessages() {
+        document.getElementById('messagesContainer').innerHTML = `
+            <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-lavender to-sky flex items-center justify-center mb-4">
+                    <i data-lucide="sparkles" class="w-8 h-8 text-white"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">Start a conversation</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 max-w-sm">Connect to the server and your Composio tools will be loaded automatically. Then start chatting!</p>
+            </div>
+        `;
+
+        lucide.createIcons();
+        allMessages = [];
+    }
+
+    function updateStats() {
+        document.getElementById('sentCount').textContent = sentCount;
+        document.getElementById('receivedCount').textContent = receivedCount;
+        document.getElementById('errorCount').textContent = errorCount;
+    }
+
+    function copyClientId() {
+        const clientId = document.getElementById('clientId').value;
+        navigator.clipboard.writeText(clientId).then(() => {
+            showToast('UUID copied', 'success', 1000);
+        });
+    }
+
+    function showExportModal() {
+        document.getElementById('exportModal').classList.remove('hidden');
+        lucide.createIcons();
+    }
+
+    function hideExportModal() {
+        document.getElementById('exportModal').classList.add('hidden');
+    }
+
+    function exportChat(format) {
+        const timestamp = new Date().toISOString().split('T')[0];
+        let content = '';
+        let filename = `chat_${timestamp}.${format}`;
+
+        if (format === 'json') {
+            content = JSON.stringify(allMessages, null, 2);
+        } else {
+            content = allMessages.map(msg => {
+                const type = msg.type === 'sent' ? 'User' : 'Assistant';
+                const content = extractMessageContent(msg.data);
+                return `[${new Date(msg.timestamp).toLocaleString()}] ${type}: ${JSON.stringify(content)}`;
+            }).join('\n\n');
+        }
+
+        downloadFile(content, filename, format === 'json' ? 'application/json' : 'text/plain');
+        showToast('Chat exported', 'success');
+        hideExportModal();
+    }
+
+    function downloadFile(content, filename, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function showToast(message, type = 'info', duration = 3000) {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+
+        const styles = {
+            'success': 'bg-sky text-gray-800',
+            'error': 'bg-coral text-white',
+            'warning': 'bg-cream text-gray-800',
+            'info': 'bg-lavender text-white'
+        };
+
+        const icons = {
+            'success': 'check-circle',
+            'error': 'x-circle',
+            'warning': 'alert-triangle',
+            'info': 'info'
+        };
+
+        toast.className = `${styles[type] || styles.info} px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 min-w-64`;
+        toast.innerHTML = `
+            <i data-lucide="${icons[type] || 'info'}" class="w-4 h-4"></i>
+            <span class="flex-1">${message}</span>
+        `;
+
+        container.appendChild(toast);
+        lucide.createIcons();
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            toast.style.transition = 'all 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
+    }
+</script>
+</body>
+</html>

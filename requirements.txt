@@ -1,0 +1,14 @@
+pydantic
+composio-langgraph
+composio
+fastapi
+uvicorn
+websockets
+openai
+python-dotenv
+langgraph
+langchain
+langchain-openai
+langchain-core
+composio-core
+composio-langchain

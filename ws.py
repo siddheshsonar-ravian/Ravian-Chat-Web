@@ -4,19 +4,22 @@ WebSocket routes for LangGraph chat with Composio integration
 
 import asyncio
 import json
+import os
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
-from dependencies import get_websocket_manager, get_composio_manager
+from dependencies import get_websocket_manager, get_composio_manager, get_chat_service
 from managers.chat_agent import ChatAgent
 from managers.connection import WebSocketManager
 from managers.composio_manager import ComposioManager
+from managers.chat_service import ChatService
 
 router = APIRouter()
 
-# Static user ID for testing
-TEST_USER_ID = "pg-test-cda9efc8-3909-4d52-b8b5-163a3a8d8daa"
+# User ID for Composio entity - loaded from .env
+# This must match the entity_id in Composio where accounts are connected
+TEST_USER_ID = os.getenv("COMPOSIO_USER_ID")
 
 
 @router.websocket("/chat/{chat_id}")
@@ -25,6 +28,7 @@ async def run_websocket(
         chat_id: str,
         ws_manager: WebSocketManager = Depends(get_websocket_manager),
         composio_manager: ComposioManager = Depends(get_composio_manager),
+        chat_service: ChatService = Depends(get_chat_service),
 ):
     """WebSocket endpoint for chat communication with Composio tools"""
 
@@ -47,51 +51,27 @@ async def run_websocket(
         # Create chat agent with Composio tools
         chat = ChatAgent(chat_id=chat_id, composio_tools=composio_tools)
 
-        # TEST: Verify tool binding works
         if composio_tools:
+            tool_names = [t.name for t in composio_tools if hasattr(t, 'name')]
             await ws_manager.send_chat_message(
                 chat_id,
-                "🧪 Running tool binding test...",
+                f"Loaded {len(composio_tools)} tools: {', '.join(tool_names[:5])}{'...' if len(tool_names) > 5 else ''}",
                 source="system"
             )
-
-            try:
-                test_response = await chat.test_tool_binding()
-
-                await ws_manager.send_chat_message(
-                    chat_id,
-                    f"✅ Test complete!",
-                    source="system"
-                )
-
-                if hasattr(test_response, 'tool_calls') and test_response.tool_calls:
-                    tool_names = [tc.get('name', 'unknown') for tc in test_response.tool_calls]
-                    await ws_manager.send_chat_message(
-                        chat_id,
-                        f"✅ LLM wants to call tools: {', '.join(tool_names)}",
-                        source="system"
-                    )
-                else:
-                    await ws_manager.send_chat_message(
-                        chat_id,
-                        f"⚠️ Warning: No tool calls. Response: {test_response.content[:200]}",
-                        source="system"
-                    )
-
-            except Exception as test_error:
-                await ws_manager.send_chat_message(
-                    chat_id,
-                    f"❌ Test failed: {str(test_error)}",
-                    source="system"
-                )
-                import traceback
-                traceback.print_exc()
 
         await ws_manager.send_chat_message(
             chat_id,
             "✅ Ready! Send a message to start chatting.",
             source="system"
         )
+
+        # Load or create chat in storage
+        stored_chat = chat_service.get_chat(chat_id)
+        if not stored_chat:
+            stored_chat = chat_service.create_chat(TEST_USER_ID, chat_id=chat_id)
+            print(f"[WS] Created new chat: {stored_chat['id']}")
+        else:
+            print(f"[WS] Loaded existing chat with {len(stored_chat.get('messages', []))} messages")
 
         while True:
             try:
@@ -100,11 +80,25 @@ async def run_websocket(
 
                 if message.get("type") == "start":
                     if message.get("task"):
+                        user_message = message.get("task")
+
+                        # Load current chat history
+                        current_chat = chat_service.get_chat(chat_id)
+                        chat_history = current_chat.get("messages", []) if current_chat else []
+
+                        # Save user message to history
+                        chat_service.add_message(chat_id, {
+                            "role": "user",
+                            "content": user_message
+                        })
+
                         asyncio.create_task(
                             ws_manager.start_chat_stream(
                                 session_id=chat_id,
-                                initial_message=message.get("task"),
-                                chat_agent=chat
+                                initial_message=user_message,
+                                chat_agent=chat,
+                                chat_history=chat_history,
+                                chat_service=chat_service
                             )
                         )
                     else:

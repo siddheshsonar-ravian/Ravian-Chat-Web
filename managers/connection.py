@@ -59,7 +59,9 @@ class WebSocketManager:
             self,
             session_id: str,
             initial_message: str = "",
-            chat_agent=None
+            chat_agent=None,
+            chat_history: list = None,
+            chat_service=None
     ) -> None:
         """
         Start a chat stream with the LangGraph agent
@@ -68,7 +70,10 @@ class WebSocketManager:
             session_id: Session identifier
             initial_message: Initial message to start the conversation
             chat_agent: The LangGraph chat agent instance
+            chat_history: List of previous messages for context
+            chat_service: ChatService instance for saving messages
         """
+        self._chat_service = chat_service  # Store for saving responses
         if session_id not in self._connections or session_id in self._closed_connections:
             raise ValueError(f"No active connection for session {session_id}")
 
@@ -94,7 +99,9 @@ class WebSocketManager:
                 chat_agent.run_chat(
                     session_id=session_id,
                     message=initial_message,
-                    ws_manager=self
+                    ws_manager=self,
+                    chat_history=chat_history,
+                    chat_service=chat_service
                 )
             )
             self._active_tasks[session_id] = task
@@ -134,7 +141,7 @@ class WebSocketManager:
             traceback.print_exc()
             await self._handle_stream_error(session_id, e)
         finally:
-            self._active_tasks.pop(session_id, None)
+            await self._active_tasks.pop(session_id, None)
             self._stop_flags.pop(session_id, None)
 
     def _create_input_func(self, session_id: str, timeout: int = 600) -> InputFuncType:
@@ -177,11 +184,11 @@ class WebSocketManager:
 
                                 # Try to get response with short timeout
                                 try:
-                                    response = await asyncio.wait_for(
+                                    response_temp = await asyncio.wait_for(
                                         self._input_responses[session_id].get(),
                                         timeout=min(timeout, 5),
                                     )
-                                    return response
+                                    return response_temp
                                 except asyncio.TimeoutError:
                                     continue  # Keep checking for closed status
 
@@ -197,7 +204,7 @@ class WebSocketManager:
                     raise ValueError(f"No input queue for session {session_id}")
 
             except Exception as e:
-                raise
+                raise e
 
         return input_handler
 
@@ -325,7 +332,7 @@ class WebSocketManager:
         # Clean up resources
         self._connections.pop(session_id, None)
         self._input_responses.pop(session_id, None)
-        self._active_tasks.pop(session_id, None)
+        await self._active_tasks.pop(session_id, None)
         self._stop_flags.pop(session_id, None)
 
     async def _send_message(self, session_id: str, message: Dict[str, Any]) -> None:
@@ -376,13 +383,14 @@ class WebSocketManager:
 
             # Disconnect all websockets with timeout
             async def disconnect_all():
-                for session_id in list(self.active_connections):
+                for session_id_temp in list(self.active_connections):
                     try:
-                        await asyncio.wait_for(self.disconnect(session_id), timeout=2)
+                        await asyncio.wait_for(self.disconnect(session_id_temp), timeout=2)
                     except asyncio.TimeoutError:
-                        print(f"Timeout disconnecting {session_id}")
-                    except Exception as e:
-                        print(f"Error disconnecting {session_id}: {e}")
+                        print(f"Timeout disconnecting {session_id_temp}")
+                    except Exception as error:
+                        print(f"Error disconnecting {session_id_temp}: {error}")
+                        raise error
 
             await asyncio.wait_for(disconnect_all(), timeout=10)
 

@@ -30,14 +30,18 @@ class ChatService:
             self.storage_path = Path("data/chats")
             self.storage_path.mkdir(parents=True, exist_ok=True)
 
-    def create_chat(self, user_id: str) -> Dict:
+    def create_chat(self, user_id: str, chat_id: str = None) -> Dict:
         """
         Create a new chat session
+
+        Args:
+            user_id: User identifier
+            chat_id: Optional chat ID (if not provided, generates UUID-4)
 
         Returns:
             Chat object with id, user_id, created_at, messages
         """
-        chat_id = str(uuid.uuid4())  # UUID-4
+        chat_id = chat_id or str(uuid.uuid4())
 
         chat = {
             "id": chat_id,

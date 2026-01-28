@@ -24,6 +24,8 @@ class ChatAgent:
         """
         self.chat_id = chat_id
         self.composio_tools = composio_tools or []
+        self._chat_service = None
+        self._session_id = None
 
         # Create a dictionary for fast tool lookup by name
         self.tools_by_name = {}
@@ -44,6 +46,31 @@ class ChatAgent:
         else:
             self.llm_with_tools = self.llm
             print(f"[ChatAgent] No Composio tools bound")
+
+    def _convert_history_to_messages(self, chat_history: List[Dict]) -> List:
+        """
+        Convert stored chat history to LangChain message format
+
+        Args:
+            chat_history: List of message dicts with 'role' and 'content'
+
+        Returns:
+            List of LangChain message objects
+        """
+        messages = []
+        for msg in chat_history:
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+
+            if role == "user":
+                messages.append(HumanMessage(content=content))
+            elif role == "assistant":
+                messages.append(AIMessage(content=content))
+            elif role == "system":
+                messages.append(SystemMessage(content=content))
+            # Skip tool messages for now as they require tool_call_id
+
+        return messages
 
     async def test_tool_binding(self):
         """Test if tools are properly bound"""
@@ -66,48 +93,49 @@ class ChatAgent:
             session_id: str,
             message: str,
             ws_manager,
-            mode: str = "chat"
+            chat_history: List[Dict] = None,
+            chat_service=None,
     ) -> None:
         """
         Run the chat with streaming to WebSocket and tool execution
+
+        Args:
+            session_id: Session identifier
+            message: Current user message
+            ws_manager: WebSocket manager instance
+            chat_history: List of previous messages from ChatService
+            chat_service: ChatService instance for saving responses
         """
+        self._chat_service = chat_service
+        self._session_id = session_id
         try:
-            if mode == "task":
-                system_content = (
-                    "You are a helpful AI task execution assistant. You excel at breaking down complex tasks, "
-                    "creating step-by-step plans, and executing multi-step workflows. When given a task:\n"
-                    "1. Analyze the task requirements\n"
-                    "2. Break it down into clear steps\n"
-                    "3. Execute each step methodically\n"
-                    "4. Provide progress updates\n"
-                    "5. Summarize the results\n\n"
-                    "Be thorough, systematic, and detail-oriented in your approach."
-                )
-            else:
-                system_content = (
-                    "You are a helpful AI assistant with access to various tools and integrations. "
-                    "You can help with tasks including answering questions, providing explanations, "
-                    "writing code, analyzing data, and interacting with external services like Gmail, YouTube, and GitHub. "
-                    "\n\n"
-                    "IMPORTANT: When you use tools:\n"
-                    "1. If a tool returns an error, explain the error to the user clearly\n"
-                    "2. Do NOT say you don't have access if a tool is available - instead try using it\n"
-                    "3. If a tool fails, check the error message and try to fix the parameters\n"
-                    "4. Tool results are returned as JSON - parse them and present information clearly\n"
-                    "5. For Gmail: Use GMAIL_FETCH_EMAILS to check emails, with appropriate parameters like max_results\n"
-                    "\n"
-                    "Be concise, clear, and helpful in your responses."
-                )
+            system_content = (
+                "You are a helpful AI assistant with access to various tools and integrations. "
+                "You can help with tasks including answering questions, providing explanations, "
+                "writing code, analyzing data, and interacting with external services like Gmail, YouTube, and GitHub. "
+                "\n\n"
+                "IMPORTANT: When you use tools:\n"
+                "1. If a tool returns an error, explain the error to the user clearly\n"
+                "2. Do NOT say you don't have access if a tool is available - instead try using it\n"
+                "3. If a tool fails, DO NOT retry the same tool with the same parameters. Explain the error to the user instead\n"
+                "4. Tool results are returned as JSON - parse them and present information clearly\n"
+                "5. For Gmail: Use GMAIL_FETCH_EMAILS to check emails, with appropriate parameters like max_results\n"
+                "6. NEVER call a tool unless the user's message specifically requires it. Do not guess or make up parameters\n"
+                "\n"
+                "Be concise, clear, and helpful in your responses."
+            )
 
             system_msg = SystemMessage(content=system_content)
+
+            # Convert chat history to LangChain messages
+            history_messages = self._convert_history_to_messages(chat_history or [])
+
             user_msg = HumanMessage(content=message)
 
-            print(f"[ChatAgent] Running in {mode.upper()} mode")
-
             if self.composio_tools:
-                await self._run_with_tools(session_id, system_msg, user_msg, ws_manager)
+                await self._run_with_tools(session_id, system_msg, user_msg, ws_manager, history_messages)
             else:
-                await self._stream_response(session_id, [system_msg, user_msg], ws_manager)
+                await self._stream_response(session_id, [system_msg] + history_messages + [user_msg], ws_manager)
 
         except Exception as e:
             await ws_manager.send_chat_message(
@@ -122,12 +150,14 @@ class ChatAgent:
             session_id: str,
             system_msg: SystemMessage,
             user_msg: HumanMessage,
-            ws_manager
+            ws_manager,
+            history_messages: List = None
     ) -> None:
         """Run chat with tool execution support AND real streaming"""
-        messages = [system_msg, user_msg]
-        max_iterations = 10
+        messages = [system_msg] + (history_messages or []) + [user_msg]
+        max_iterations = 5
         iteration = 0
+        failed_tools = {}  # Track consecutive failures per tool name
 
         while iteration < max_iterations:
             iteration += 1
@@ -214,6 +244,7 @@ class ChatAgent:
                     source="system"
                 )
 
+                all_failed = True
                 for tool_call in tool_calls:
                     tool_name = tool_call.get("name")
                     tool_args = tool_call.get("args", {})
@@ -222,14 +253,35 @@ class ChatAgent:
                     if not tool_name:
                         continue
 
+                    # Check if this tool has already failed too many times
+                    if failed_tools.get(tool_name, 0) >= 2:
+                        error_msg = f"Tool '{tool_name}' has failed repeatedly. Skipping."
+                        print(f"[ChatAgent] {error_msg}")
+                        tool_message = ToolMessage(
+                            content=error_msg,
+                            tool_call_id=tool_call_id,
+                            name=tool_name
+                        )
+                        messages.append(tool_message)
+                        continue
+
                     print(f"[ChatAgent] Executing: {tool_name} with {tool_args}")
 
                     try:
                         if tool_name not in self.tools_by_name:
                             result = f"Error: Tool '{tool_name}' not found"
+                            failed_tools[tool_name] = failed_tools.get(tool_name, 0) + 1
                         else:
                             tool = self.tools_by_name[tool_name]
                             result = tool.invoke(tool_args)
+
+                            # Check if the result indicates failure
+                            result_str = str(result)
+                            if "'successful': False" in result_str or "'error'" in result_str:
+                                failed_tools[tool_name] = failed_tools.get(tool_name, 0) + 1
+                            else:
+                                failed_tools.pop(tool_name, None)
+                                all_failed = False
 
                         print(f"[ChatAgent] Tool result: {str(result)[:500]}...")
 
@@ -246,13 +298,14 @@ class ChatAgent:
 
                         await ws_manager.send_chat_message(
                             session_id,
-                            f"📊 Tool Output from '{tool_name}':\n{result_display}",
+                            f"Tool Output from '{tool_name}':\n{result_display}",
                             source="tool"
                         )
 
                     except Exception as e:
                         error_msg = f"Error executing {tool_name}: {str(e)}"
                         print(f"[ChatAgent] {error_msg}")
+                        failed_tools[tool_name] = failed_tools.get(tool_name, 0) + 1
 
                         tool_message = ToolMessage(
                             content=error_msg,
@@ -263,9 +316,15 @@ class ChatAgent:
 
                         await ws_manager.send_chat_message(
                             session_id,
-                            f"❌ {error_msg}",
+                            f"Error: {error_msg}",
                             source="tool"
                         )
+
+                # If all tools in this iteration failed and have hit their limit, break
+                if all_failed and all(failed_tools.get(tc.get("name"), 0) >= 2 for tc in tool_calls if tc.get("name")):
+                    print(f"[ChatAgent] All tools have failed repeatedly, stopping loop")
+                    # Add a message to tell the LLM to respond without tools
+                    messages.append(HumanMessage(content="All tool calls have failed. Please respond to the user without using tools and explain what went wrong."))
 
                 continue
 
@@ -279,6 +338,12 @@ class ChatAgent:
                         is_streaming=False,
                         is_complete=True
                     )
+                    # Save assistant response to chat history
+                    if self._chat_service and full_response:
+                        self._chat_service.add_message(self._session_id, {
+                            "role": "assistant",
+                            "content": full_response
+                        })
                 break
 
         if iteration >= max_iterations:
@@ -317,3 +382,9 @@ class ChatAgent:
                 is_streaming=False,
                 is_complete=True
             )
+            # Save assistant response to chat history
+            if self._chat_service and full_response:
+                self._chat_service.add_message(self._session_id, {
+                    "role": "assistant",
+                    "content": full_response
+                })

@@ -10,6 +10,10 @@ from pathlib import Path
 
 import uvicorn
 from dotenv import load_dotenv
+
+# Load .env BEFORE importing modules that read env vars at import time
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware import Middleware
 from fastapi.responses import HTMLResponse
@@ -19,9 +23,6 @@ from starlette.responses import RedirectResponse
 import ws
 from dependencies import init_managers, cleanup_managers
 from routes.chat_routes import router
-
-# Initialize application
-load_dotenv()
 
 middleware = [
     Middleware(

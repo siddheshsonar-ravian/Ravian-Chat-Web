@@ -1,14 +1,19 @@
-pydantic
-composio-langgraph
-composio
-fastapi
-uvicorn
-websockets
-openai
-python-dotenv
-langgraph
-langchain
-langchain-openai
-langchain-core
-composio-core
-composio-langchain
+starlette
+# Core dependencies
+pydantic>=2.5.0,<3.0.0
+fastapi>=0.109.0,<0.110.0
+uvicorn[standard]>=0.27.0,<0.28.0
+websockets>=12.0,<13.0
+python-dotenv>=1.0.0,<2.0.0
+
+# AI/LLM dependencies
+openai>=1.10.0,<2.0.0
+langgraph>=0.2.0,<0.3.0
+langchain>=0.1.0,<0.2.0
+langchain-openai>=0.1.0,<0.2.0
+langchain-core>=0.1.0,<0.2.0
+
+# Composio integration (official library - handles versioning automatically)
+composio>=0.10.9,<0.11.0
+composio-langchain>=0.10.9,<0.11.0
+composio-core>=0.7.21,<0.8.0

@@ -3,42 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>Langraph Chat with Composio</title>
+    <title>Composio Chat | AI Assistant</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Marked.js for Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
                     colors: {
-                        coral: '#FF8F8F',
-                        cream: '#FFF1CB',
-                        sky: '#C2E2FA',
-                        lavender: '#B7A3E3',
-                        tool: '#E0F2FE',
-                        toolDark: '#1E3A5F',
-                    }
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        accent: {
+                            50: '#fdf4ff',
+                            100: '#fae8ff',
+                            200: '#f5d0fe',
+                            300: '#f0abfc',
+                            400: '#e879f9',
+                            500: '#d946ef',
+                            600: '#c026d3',
+                            700: '#a21caf',
+                            800: '#86198f',
+                            900: '#701a75',
+                        },
+                        surface: {
+                            50: '#fafafa',
+                            100: '#f4f4f5',
+                            200: '#e4e4e7',
+                            300: '#d4d4d8',
+                            400: '#a1a1aa',
+                            500: '#71717a',
+                            600: '#52525b',
+                            700: '#3f3f46',
+                            800: '#27272a',
+                            900: '#18181b',
+                            950: '#09090b',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.2s ease-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'slide-in-right': 'slideInRight 0.3s ease-out',
+                        'pulse-soft': 'pulseSoft 2s infinite',
+                        'typing': 'typing 1.4s infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        slideInRight: {
+                            '0%': { opacity: '0', transform: 'translateX(20px)' },
+                            '100%': { opacity: '1', transform: 'translateX(0)' },
+                        },
+                        pulseSoft: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0.5' },
+                        },
+                        typing: {
+                            '0%, 100%': { opacity: '0.2' },
+                            '50%': { opacity: '1' },
+                        },
+                    },
                 }
             }
         }
     </script>
+
     <style>
-        @keyframes slideIn {
-            from { transform: translateY(10px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        * {
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
         }
 
-        @keyframes pulse-dot {
-            0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
-            40% { transform: scale(1); opacity: 1; }
-        }
-
-        .message-enter { animation: slideIn 0.3s ease-out; }
-        .typing-dot { animation: pulse-dot 1.4s infinite ease-in-out; }
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-
+        /* Custom Scrollbar */
         .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
         }
@@ -46,262 +114,341 @@
             background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(0, 0, 0, 0.15);
             border-radius: 3px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.25);
         }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.15);
         }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.25);
         }
 
-        * {
-            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        /* Typing indicator dots */
+        .typing-dot {
+            animation: typing 1.4s infinite ease-in-out;
         }
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
 
+        /* Blinking cursor */
         .cursor-blink {
             animation: blink 1s step-end infinite;
         }
-
         @keyframes blink {
             0%, 100% { opacity: 1; }
             50% { opacity: 0; }
         }
 
-        .tool-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-            background: #0EA5E9;
-            color: white;
+        /* Message animations */
+        .message-enter {
+            animation: slideUp 0.25s ease-out;
+        }
+
+        /* Button hover effects */
+        .btn-hover {
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-hover::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: currentColor;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+        .btn-hover:hover::after {
+            opacity: 0.1;
+        }
+
+        /* Focus styles */
+        .focus-ring:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.3);
+        }
+        .dark .focus-ring:focus {
+            box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3);
+        }
+
+        /* Code blocks */
+        pre code {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Prose styling for messages */
+        .prose-message p { margin: 0.5em 0; }
+        .prose-message p:first-child { margin-top: 0; }
+        .prose-message p:last-child { margin-bottom: 0; }
+        .prose-message ul, .prose-message ol { margin: 0.5em 0; padding-left: 1.5em; }
+        .prose-message li { margin: 0.25em 0; }
+
+        /* Glass effect for sidebar */
+        .glass {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* Status indicator pulse */
+        .status-pulse {
+            animation: pulseSoft 2s infinite;
         }
     </style>
 </head>
-<body class="h-screen bg-white dark:bg-gray-900 font-sans overflow-hidden">
-<div class="fixed top-4 right-4 z-50 flex flex-col gap-2" id="toastContainer"></div>
 
-<button class="fixed top-4 left-4 z-50 lg:hidden w-10 h-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg flex items-center justify-center"
-        id="mobileSidebarToggle">
-    <i class="w-5 h-5" data-lucide="menu"></i>
-</button>
+<body class="h-screen bg-surface-50 dark:bg-surface-950 font-sans overflow-hidden antialiased">
+    <!-- Toast Container -->
+    <div class="fixed top-4 right-4 z-50 flex flex-col gap-2" id="toastContainer"></div>
 
-<div class="h-full flex">
-    <!-- Sidebar -->
-    <aside class="w-80 bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col fixed lg:relative h-full z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300"
-           id="sidebar">
-        <!-- Header -->
-        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex items-center justify-between mb-4">
-                <h1 class="text-xl font-semibold text-gray-800 dark:text-white">🤖 Composio Chat</h1>
-                <button class="w-9 h-9 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600"
-                        id="themeToggle">
-                    <i class="w-4 h-4 theme-icon" data-lucide="moon"></i>
+    <!-- Mobile Sidebar Toggle -->
+    <button class="fixed top-4 left-4 z-50 lg:hidden w-10 h-10 bg-white dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-lg shadow-sm flex items-center justify-center hover:bg-surface-50 dark:hover:bg-surface-700 transition-colors"
+            id="mobileSidebarToggle">
+        <i class="w-5 h-5 text-surface-600 dark:text-surface-400" data-lucide="menu"></i>
+    </button>
+
+    <div class="h-full flex">
+        <!-- Sidebar -->
+        <aside class="w-72 bg-white dark:bg-surface-900 border-r border-surface-200 dark:border-surface-800 flex flex-col fixed lg:relative h-full z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-200"
+               id="sidebar">
+
+            <!-- Sidebar Header -->
+            <div class="p-4 border-b border-surface-200 dark:border-surface-800">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
+                            <i class="w-4 h-4 text-white" data-lucide="bot"></i>
+                        </div>
+                        <span class="font-semibold text-surface-900 dark:text-white">Composio Chat</span>
+                    </div>
+                    <button class="w-8 h-8 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 flex items-center justify-center transition-colors"
+                            id="themeToggle">
+                        <i class="w-4 h-4 text-surface-500 theme-icon" data-lucide="moon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sidebar Content -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3">
+
+                <!-- Connection Status -->
+                <div class="p-3 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700" id="connectionStatus">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                        <span class="text-sm text-surface-600 dark:text-surface-400">Disconnected</span>
+                    </div>
+                </div>
+
+                <!-- New Chat Button -->
+                <button class="w-full py-2.5 px-4 rounded-lg bg-primary-500 hover:bg-primary-600 text-white font-medium transition-colors flex items-center justify-center gap-2"
+                        id="newChatBtn">
+                    <i class="w-4 h-4" data-lucide="plus"></i>
+                    <span>New Chat</span>
                 </button>
-            </div>
 
-            <!-- Connection Status -->
-            <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700"
-                 id="connectionStatus">
-                <div class="w-2 h-2 rounded-full bg-red-500"></div>
-                <span class="text-sm text-gray-600 dark:text-gray-300">Disconnected</span>
-            </div>
-        </div>
-
-        <!-- Sidebar Content -->
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
-            <!-- Connected Apps Section -->
-            <div class="bg-white dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
-                <div class="flex items-center gap-2 mb-2">
-                    <i class="w-4 h-4 text-lavender" data-lucide="puzzle"></i>
-                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Connected Apps</span>
+                <!-- Chat History Section -->
+                <div id="chatHistorySection">
+                    <div class="p-3 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="w-4 h-4 text-surface-400" data-lucide="history"></i>
+                            <span class="text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wide">Recent Chats</span>
+                        </div>
+                        <div id="chatHistoryList" class="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+                            <p class="text-xs text-surface-400 py-2">No chats yet</p>
+                        </div>
+                    </div>
                 </div>
-                <div id="connectedApps" class="text-xs text-gray-500 dark:text-gray-400">
-                    Not connected
-                </div>
-            </div>
 
-            <!-- Available Tools Section -->
-            <div class="bg-white dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
-                <div class="flex items-center gap-2 mb-2">
-                    <i class="w-4 h-4 text-sky" data-lucide="wrench"></i>
-                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Available Tools</span>
+                <!-- Connected Apps -->
+                <div class="p-3 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="w-4 h-4 text-accent-500" data-lucide="puzzle"></i>
+                        <span class="text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wide">Connected Apps</span>
+                    </div>
+                    <div id="connectedApps" class="text-sm text-surface-500 dark:text-surface-400">
+                        Not connected
+                    </div>
                 </div>
-                <div id="availableTools" class="text-xs text-gray-500 dark:text-gray-400">
-                    0 tools loaded
+
+                <!-- Available Tools -->
+                <div class="p-3 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="w-4 h-4 text-primary-500" data-lucide="wrench"></i>
+                        <span class="text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wide">Tools</span>
+                    </div>
+                    <div id="availableTools" class="text-sm text-surface-500 dark:text-surface-400">
+                        0 tools loaded
+                    </div>
                 </div>
-            </div>
 
-            <!-- New Chat -->
-            <button class="w-full py-2.5 px-4 rounded-lg bg-lavender text-white font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-                    id="newChatBtn">
-                <i class="w-4 h-4" data-lucide="plus"></i>
-                <span>New Chat</span>
-            </button>
+                <!-- Client ID -->
+                <div class="p-3 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700">
+                    <label class="block text-xs font-medium text-surface-500 dark:text-surface-400 uppercase tracking-wide mb-2">Session ID</label>
+                    <div class="flex gap-2">
+                        <input class="flex-1 px-3 py-2 text-sm rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-900 text-surface-900 dark:text-white focus-ring"
+                               id="clientId"
+                               placeholder="Enter UUID..."
+                               type="text"
+                               value="test-chat-123">
+                        <button class="w-9 h-9 rounded-lg border border-surface-300 dark:border-surface-600 bg-white dark:bg-surface-900 hover:bg-surface-50 dark:hover:bg-surface-800 flex items-center justify-center transition-colors"
+                                onclick="copyClientId()" title="Copy ID">
+                            <i class="w-4 h-4 text-surface-500" data-lucide="copy"></i>
+                        </button>
+                    </div>
+                </div>
 
-            <!-- Client UUID -->
-            <div>
-                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Client UUID</label>
+                <!-- Connection Buttons -->
                 <div class="flex gap-2">
-                    <input class="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lavender"
-                           id="clientId"
-                           placeholder="Enter UUID..."
-                           type="text"
-                           value="test-chat-123">
-                    <button class="w-9 h-9 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center"
-                            onclick="copyClientId()">
-                        <i class="w-4 h-4" data-lucide="copy"></i>
+                    <button class="flex-1 py-2 px-3 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-medium transition-colors flex items-center justify-center gap-2 text-sm"
+                            id="connectBtn">
+                        <i class="w-4 h-4" data-lucide="plug"></i>
+                        <span>Connect</span>
                     </button>
-                </div>
-            </div>
-
-            <!-- Connection Buttons -->
-            <div class="flex gap-2">
-                <button class="flex-1 py-2 px-4 rounded-lg bg-sky text-gray-800 font-medium hover:opacity-90 flex items-center justify-center gap-2"
-                        id="connectBtn">
-                    <i class="w-4 h-4" data-lucide="plug"></i>
-                    <span>Connect</span>
-                </button>
-                <button class="flex-1 py-2 px-4 rounded-lg bg-coral text-white font-medium hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
-                        disabled
-                        id="disconnectBtn">
-                    <i class="w-4 h-4" data-lucide="plug-zap"></i>
-                    <span>Disconnect</span>
-                </button>
-            </div>
-
-            <!-- Stats -->
-            <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div class="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                        <div class="text-lg font-bold text-lavender" id="sentCount">0</div>
-                        <div class="text-xs text-gray-500">Sent</div>
-                    </div>
-                    <div>
-                        <div class="text-lg font-bold text-sky" id="receivedCount">0</div>
-                        <div class="text-xs text-gray-500">Received</div>
-                    </div>
-                    <div>
-                        <div class="text-lg font-bold text-coral" id="errorCount">0</div>
-                        <div class="text-xs text-gray-500">Errors</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-            <div class="text-xs text-gray-500 text-center">
-                <p>LangGraph + Composio Integration</p>
-            </div>
-        </div>
-    </aside>
-
-    <!-- Main Chat Area -->
-    <main class="flex-1 flex flex-col bg-white dark:bg-gray-900 h-full">
-        <!-- Chat Header -->
-        <header class="h-14 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6 flex-shrink-0">
-            <div class="flex items-center gap-3">
-                <i class="w-5 h-5 text-sky" data-lucide="bot"></i>
-                <h2 class="text-sm font-medium text-gray-700 dark:text-gray-300">AI Assistant with Tools</h2>
-            </div>
-            <div class="flex items-center gap-2">
-                <button class="w-9 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
-                        id="clearBtn"
-                        title="Clear chat">
-                    <i class="w-4 h-4" data-lucide="trash-2"></i>
-                </button>
-                <button class="w-9 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center"
-                        id="exportBtn"
-                        title="Export chat">
-                    <i class="w-4 h-4" data-lucide="download"></i>
-                </button>
-            </div>
-        </header>
-
-        <!-- Messages Container -->
-        <div class="flex-1 overflow-y-auto custom-scrollbar px-6 py-8" id="messagesContainer">
-            <!-- Empty State -->
-            <div class="h-full flex flex-col items-center justify-center text-center" id="emptyState">
-                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-lavender to-sky flex items-center justify-center mb-4">
-                    <i class="w-8 h-8 text-white" data-lucide="sparkles"></i>
-                </div>
-                <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">Start a conversation</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 max-w-sm">Connect to the server and your Composio tools will be loaded automatically. Then start chatting!</p>
-            </div>
-        </div>
-
-        <!-- Typing Indicator -->
-        <div class="hidden px-6 py-3" id="typingIndicator">
-            <div class="flex items-center gap-3 max-w-3xl mx-auto">
-                <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
-                    <i class="w-4 h-4 text-gray-400" data-lucide="bot"></i>
-                </div>
-                <div class="flex gap-1">
-                    <span class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></span>
-                    <span class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></span>
-                    <span class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Input Area -->
-        <div class="border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex-shrink-0">
-            <div class="max-w-3xl mx-auto">
-                <div class="flex gap-3">
-                    <textarea class="flex-1 px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-lavender min-h-[48px] max-h-32"
-                              id="messageInput"
-                              placeholder="Type your message here..."
-                              rows="1"></textarea>
-                    <button class="w-12 h-12 rounded-xl bg-lavender text-white flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                    <button class="flex-1 py-2 px-3 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                             disabled
-                            id="sendBtn">
-                        <i class="w-5 h-5" data-lucide="send"></i>
+                            id="disconnectBtn">
+                        <i class="w-4 h-4" data-lucide="plug-zap"></i>
+                        <span>Disconnect</span>
+                    </button>
+                </div>
+
+                <!-- Stats -->
+                <div class="p-3 rounded-lg bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700">
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                            <div class="text-lg font-semibold text-primary-500" id="sentCount">0</div>
+                            <div class="text-xs text-surface-400">Sent</div>
+                        </div>
+                        <div>
+                            <div class="text-lg font-semibold text-emerald-500" id="receivedCount">0</div>
+                            <div class="text-xs text-surface-400">Received</div>
+                        </div>
+                        <div>
+                            <div class="text-lg font-semibold text-red-500" id="errorCount">0</div>
+                            <div class="text-xs text-surface-400">Errors</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Footer -->
+            <div class="p-3 border-t border-surface-200 dark:border-surface-800">
+                <div class="text-xs text-surface-400 text-center">
+                    LangGraph + Composio
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="flex-1 flex flex-col bg-white dark:bg-surface-900 h-full">
+
+            <!-- Chat Header -->
+            <header class="h-14 border-b border-surface-200 dark:border-surface-800 flex items-center justify-between px-4 flex-shrink-0 bg-white dark:bg-surface-900">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center">
+                        <i class="w-4 h-4 text-white" data-lucide="sparkles"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-medium text-surface-900 dark:text-white">AI Assistant</h2>
+                        <p class="text-xs text-surface-400">with Composio Tools</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1">
+                    <button class="w-9 h-9 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 flex items-center justify-center transition-colors"
+                            id="clearBtn" title="Clear chat">
+                        <i class="w-4 h-4 text-surface-500" data-lucide="trash-2"></i>
+                    </button>
+                    <button class="w-9 h-9 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 flex items-center justify-center transition-colors"
+                            id="exportBtn" title="Export chat">
+                        <i class="w-4 h-4 text-surface-500" data-lucide="download"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Messages Container -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar" id="messagesContainer">
+                <!-- Empty State -->
+                <div class="h-full flex flex-col items-center justify-center text-center px-4" id="emptyState">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center mb-4 shadow-lg shadow-primary-500/20">
+                        <i class="w-8 h-8 text-white" data-lucide="message-square"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-surface-900 dark:text-white mb-2">Start a conversation</h3>
+                    <p class="text-sm text-surface-500 dark:text-surface-400 max-w-sm">Connect to the server to load your Composio tools, then start chatting with the AI assistant.</p>
+                </div>
+            </div>
+
+            <!-- Typing Indicator -->
+            <div class="hidden px-4 py-3" id="typingIndicator">
+                <div class="max-w-3xl mx-auto">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-surface-100 dark:bg-surface-800 flex items-center justify-center flex-shrink-0">
+                            <i class="w-4 h-4 text-surface-400" data-lucide="bot"></i>
+                        </div>
+                        <div class="flex gap-1.5 px-4 py-3 bg-surface-100 dark:bg-surface-800 rounded-lg">
+                            <span class="w-2 h-2 bg-surface-400 rounded-full typing-dot"></span>
+                            <span class="w-2 h-2 bg-surface-400 rounded-full typing-dot"></span>
+                            <span class="w-2 h-2 bg-surface-400 rounded-full typing-dot"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="border-t border-surface-200 dark:border-surface-800 p-4 flex-shrink-0 bg-white dark:bg-surface-900">
+                <div class="max-w-3xl mx-auto">
+                    <div class="flex gap-3">
+                        <div class="flex-1 relative">
+                            <textarea class="w-full px-4 py-3 rounded-xl border border-surface-300 dark:border-surface-600 bg-surface-50 dark:bg-surface-800 text-surface-900 dark:text-white resize-none focus-ring placeholder-surface-400 min-h-[48px] max-h-32"
+                                      id="messageInput"
+                                      placeholder="Type your message..."
+                                      rows="1"></textarea>
+                        </div>
+                        <button class="w-12 h-12 rounded-xl bg-primary-500 hover:bg-primary-600 text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 shadow-lg shadow-primary-500/20"
+                                disabled
+                                id="sendBtn">
+                            <i class="w-5 h-5" data-lucide="send"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs text-surface-400 mt-2 text-center">Press Enter to send, Shift+Enter for new line</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="fixed inset-0 z-50 hidden" id="exportModal">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="hideExportModal()"></div>
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-surface-800 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-slide-up">
+            <div class="p-4 border-b border-surface-200 dark:border-surface-700 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-surface-900 dark:text-white">Export Chat</h3>
+                <button class="w-8 h-8 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 flex items-center justify-center" onclick="hideExportModal()">
+                    <i class="w-4 h-4 text-surface-500" data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="p-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <button class="p-4 rounded-xl border-2 border-surface-200 dark:border-surface-600 hover:border-primary-500 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors text-center group"
+                            onclick="exportChat('json')">
+                        <i class="w-8 h-8 mx-auto mb-2 text-surface-400 group-hover:text-primary-500" data-lucide="file-json"></i>
+                        <div class="text-sm font-medium text-surface-900 dark:text-white">JSON</div>
+                        <div class="text-xs text-surface-400">Structured data</div>
+                    </button>
+                    <button class="p-4 rounded-xl border-2 border-surface-200 dark:border-surface-600 hover:border-primary-500 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-colors text-center group"
+                            onclick="exportChat('txt')">
+                        <i class="w-8 h-8 mx-auto mb-2 text-surface-400 group-hover:text-primary-500" data-lucide="file-text"></i>
+                        <div class="text-sm font-medium text-surface-900 dark:text-white">Text</div>
+                        <div class="text-xs text-surface-400">Plain text</div>
                     </button>
                 </div>
             </div>
-        </div>
-    </main>
-</div>
-
-<!-- Export Modal -->
-<div class="fixed inset-0 z-50 hidden" id="exportModal">
-    <div class="absolute inset-0 bg-black bg-opacity-50" onclick="hideExportModal()"></div>
-    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Export Chat</h3>
-        </div>
-        <div class="p-6 space-y-4">
-            <div class="grid grid-cols-2 gap-3">
-                <button class="p-4 rounded-xl border-2 border-gray-300 dark:border-gray-600 hover:border-lavender dark:hover:border-lavender text-center"
-                        onclick="exportChat('json')">
-                    <i class="w-8 h-8 mx-auto mb-2" data-lucide="file-json"></i>
-                    <div class="text-sm font-medium text-gray-900 dark:text-white">JSON</div>
-                </button>
-                <button class="p-4 rounded-xl border-2 border-gray-300 dark:border-gray-600 hover:border-lavender dark:hover:border-lavender text-center"
-                        onclick="exportChat('txt')">
-                    <i class="w-8 h-8 mx-auto mb-2" data-lucide="file-text"></i>
-                    <div class="text-sm font-medium text-gray-900 dark:text-white">Text</div>
-                </button>
-            </div>
-        </div>
-        <div class="p-4 bg-gray-50 dark:bg-gray-900 flex justify-end">
-            <button class="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                    onclick="hideExportModal()">
-                Cancel
-            </button>
         </div>
     </div>
-</div>
 
 <script>
+    // State
     let ws = null;
     let sentCount = 0;
     let receivedCount = 0;
@@ -320,12 +467,13 @@
     const API_BASE = 'http://localhost:8080/api';
     const WS_BASE = 'ws://localhost:8080/ws';
 
+    // Initialize
     document.addEventListener('DOMContentLoaded', async function() {
         lucide.createIcons();
         initTheme();
         initEventListeners();
         await loadUserChats();
-        showToast('Welcome to Composio Chat!', 'info', 2000);
+        showToast('Welcome to Composio Chat', 'info', 2000);
     });
 
     function initTheme() {
@@ -340,7 +488,6 @@
         document.documentElement.classList.toggle('dark');
         localStorage.setItem('theme', currentTheme);
         updateThemeIcon();
-        lucide.createIcons();
     }
 
     function updateThemeIcon() {
@@ -390,6 +537,7 @@
         });
     }
 
+    // Chat Management
     async function loadUserChats() {
         try {
             const response = await fetch(`${API_BASE}/chats/user/${currentUserId}`);
@@ -415,42 +563,21 @@
     }
 
     function displayChatHistory() {
-        let chatSection = document.getElementById('chatHistorySection');
-
-        if (!chatSection) {
-            const sidebar = document.querySelector('.flex-1.overflow-y-auto');
-            const newSection = document.createElement('div');
-            newSection.id = 'chatHistorySection';
-            newSection.innerHTML = `
-                <div class="bg-white dark:bg-gray-700 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
-                    <div class="flex items-center gap-2 mb-2">
-                        <i class="w-4 h-4 text-lavender" data-lucide="message-square"></i>
-                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Chat History</span>
-                    </div>
-                    <div id="chatHistoryList" class="space-y-2 max-h-64 overflow-y-auto custom-scrollbar"></div>
-                </div>
-            `;
-            sidebar.insertBefore(newSection, sidebar.querySelector('.pt-4'));
-            lucide.createIcons();
-        }
-
         const list = document.getElementById('chatHistoryList');
 
         if (allChats.length === 0) {
-            list.innerHTML = '<p class="text-xs text-gray-500 dark:text-gray-400">No chats yet</p>';
+            list.innerHTML = '<p class="text-xs text-surface-400 py-2">No chats yet</p>';
             return;
         }
 
-        list.innerHTML = allChats.map(chat => `
-            <button
-                onclick="loadChat('${chat.id}')"
-                class="w-full text-left p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600 group transition-colors"
-            >
-                <div class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-                    ${escapeHtml(chat.title)}
+        list.innerHTML = allChats.slice(0, 10).map(chat => `
+            <button onclick="loadChat('${chat.id}')"
+                    class="w-full text-left p-2 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors group ${currentChatId === chat.id ? 'bg-primary-50 dark:bg-primary-500/10' : ''}">
+                <div class="text-sm font-medium text-surface-700 dark:text-surface-300 truncate">
+                    ${escapeHtml(chat.title || 'New Chat')}
                 </div>
-                <div class="text-xs text-gray-500 flex justify-between mt-1">
-                    <span>${chat.message_count || 0} messages</span>
+                <div class="text-xs text-surface-400 flex justify-between mt-0.5">
+                    <span>${chat.message_count || 0} msgs</span>
                     <span>${formatDate(chat.updated_at)}</span>
                 </div>
             </button>
@@ -458,6 +585,7 @@
     }
 
     function formatDate(dateString) {
+        if (!dateString) return '';
         const date = new Date(dateString);
         const now = new Date();
         const diff = now - date;
@@ -488,7 +616,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: currentUserId })
                 });
-
                 if (response.ok) {
                     const serverChat = await response.json();
                     newChat.id = serverChat.id;
@@ -539,6 +666,7 @@
             document.getElementById('clientId').value = chat.id;
 
             clearMessages();
+            displayChatHistory();
 
             if (chat.messages && chat.messages.length > 0) {
                 chat.messages.forEach(msg => {
@@ -600,6 +728,7 @@
         }
     }
 
+    // WebSocket Connection
     function connect() {
         const clientId = document.getElementById('clientId').value.trim();
         if (!clientId) {
@@ -654,77 +783,65 @@
         }
     }
 
-function handleWebSocketMessage(data) {
-    console.log('Received:', data);
+    function handleWebSocketMessage(data) {
+        console.log('Received:', data);
 
-    switch(data.type) {
-        case 'system':
-            handleSystemMessage(data);
-            break;
-        case 'stream':
-            document.getElementById('typingIndicator').classList.add('hidden');
-            handleStreamingMessage(data);
-            break;
+        switch(data.type) {
+            case 'system':
+                handleSystemMessage(data);
+                break;
+            case 'stream':
+                document.getElementById('typingIndicator').classList.add('hidden');
+                handleStreamingMessage(data);
+                break;
+            case 'message':
+                document.getElementById('typingIndicator').classList.add('hidden');
 
-        case 'message':
-    document.getElementById('typingIndicator').classList.add('hidden');
-
-    if (data.data && data.data.source === 'user') {
-        // User messages are already handled in sendMessage()
-        // Backend is echoing it back, but we ignore it
-    } else if (data.data && data.data.source === 'system') {
-        addSystemMessage(data.data.content);
-    } else if (data.data && data.data.source === 'tool') {
-        const toolContent = data.data.content;
-        addToolMessage(toolContent);
-        if (currentChatId) {
-            saveMessageToChat(currentChatId, 'tool', toolContent);
-        }
-    } else if (data.data && data.data.source === 'assistant') {
-        // Handle assistant messages
-        if (data.data.complete) {
-            // Finalize streaming and save to chat history
-            if (streamingAccumulator) {
-                if (currentChatId) {
-                    saveMessageToChat(currentChatId, 'assistant', streamingAccumulator);
-                }
-                finalizeStreamingMessage();
-            } else {
-                // No streaming happened, this is a direct complete message
-                // (shouldn't happen in your flow, but just in case)
-                if (data.data.content) {
-                    addMessage(data, 'received');
+                if (data.data && data.data.source === 'user') {
+                    // User messages handled in sendMessage()
+                } else if (data.data && data.data.source === 'system') {
+                    addSystemMessage(data.data.content);
+                } else if (data.data && data.data.source === 'tool') {
+                    const toolContent = data.data.content;
+                    addToolMessage(toolContent);
                     if (currentChatId) {
-                        saveMessageToChat(currentChatId, 'assistant', data.data.content);
+                        saveMessageToChat(currentChatId, 'tool', toolContent);
                     }
+                } else if (data.data && data.data.source === 'assistant') {
+                    if (data.data.complete) {
+                        if (streamingAccumulator) {
+                            if (currentChatId) {
+                                saveMessageToChat(currentChatId, 'assistant', streamingAccumulator);
+                            }
+                            finalizeStreamingMessage();
+                        } else if (data.data.content) {
+                            addMessage(data, 'received');
+                            if (currentChatId) {
+                                saveMessageToChat(currentChatId, 'assistant', data.data.content);
+                            }
+                        }
+                    } else {
+                        addMessage(data, 'received');
+                    }
+                } else {
+                    receivedCount++;
+                    updateStats();
+                    addMessage(data, 'received');
                 }
-            }
-        } else {
-            // Non-complete assistant message without streaming
-            // This shouldn't happen in your current flow either
-            addMessage(data, 'received');
+                break;
+            case 'completion':
+                handleCompletionMessage(data);
+                break;
+            case 'error':
+                errorCount++;
+                updateStats();
+                showToast(data.message || 'An error occurred', 'error');
+                addSystemMessage(`Error: ${data.message}`, 'error');
+                break;
+            case 'pong':
+                break;
         }
-    } else {
-        // Fallback for any other messages
-        receivedCount++;
-        updateStats();
-        addMessage(data, 'received');
     }
-    break;
-
-        case 'completion':
-            handleCompletionMessage(data);
-            break;
-        case 'error':
-            errorCount++;
-            updateStats();
-            showToast(data.message || 'An error occurred', 'error');
-            addSystemMessage(`❌ Error: ${data.message}`, 'error');
-            break;
-        case 'pong':
-            break;
-    }
-}
 
     function handleStreamingMessage(data) {
         const content = data.data?.content || '';
@@ -735,21 +852,23 @@ function handleWebSocketMessage(data) {
             if (emptyState) emptyState.remove();
 
             const messageDiv = document.createElement('div');
-            messageDiv.className = 'message-enter max-w-3xl mx-auto mb-6';
+            messageDiv.className = 'message-enter px-4 py-3';
             messageDiv.id = 'streaming-message-container';
 
             const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             messageDiv.innerHTML = `
-                <div class="flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-full bg-sky flex items-center justify-center flex-shrink-0">
-                        <i data-lucide="bot" class="w-4 h-4 text-gray-700"></i>
-                    </div>
-                    <div class="flex-1">
-                        <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3">
-                            <div class="text-gray-800 dark:text-gray-200 message-content"></div>
+                <div class="max-w-3xl mx-auto">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="bot" class="w-4 h-4 text-white"></i>
                         </div>
-                        <div class="text-xs text-gray-400 mt-1">${timestamp}</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="bg-surface-50 dark:bg-surface-800 rounded-lg rounded-tl-none px-4 py-3 border border-surface-200 dark:border-surface-700">
+                                <div class="text-surface-700 dark:text-surface-200 prose-message message-content text-sm"></div>
+                            </div>
+                            <div class="text-xs text-surface-400 mt-1.5">${timestamp}</div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -764,7 +883,7 @@ function handleWebSocketMessage(data) {
 
         if (currentStreamingMessage && content) {
             streamingAccumulator += content;
-            currentStreamingMessage.innerHTML = formatContent(streamingAccumulator) + '<span class="cursor-blink">|</span>';
+            currentStreamingMessage.innerHTML = formatContent(streamingAccumulator) + '<span class="cursor-blink text-primary-500">|</span>';
 
             if (autoScroll) {
                 const container = document.getElementById('messagesContainer');
@@ -803,21 +922,23 @@ function handleWebSocketMessage(data) {
         const reason = data.reason || '';
 
         if (status === 'stopped' || status === 'cancelled') {
-            addSystemMessage(`⏹️ ${status.charAt(0).toUpperCase() + status.slice(1)}${reason ? ': ' + reason : ''}`, 'warning');
+            addSystemMessage(`${status.charAt(0).toUpperCase() + status.slice(1)}${reason ? ': ' + reason : ''}`, 'warning');
         }
     }
 
     function updateConnectionStatus(status, text) {
         const statusEl = document.getElementById('connectionStatus');
         const colors = {
-            'connected': 'bg-green-500',
-            'connecting': 'bg-yellow-500',
+            'connected': 'bg-emerald-500',
+            'connecting': 'bg-amber-500 status-pulse',
             'disconnected': 'bg-red-500'
         };
 
         statusEl.innerHTML = `
-            <div class="w-2 h-2 rounded-full ${colors[status] || 'bg-red-500'}"></div>
-            <span class="text-sm text-gray-600 dark:text-gray-300">${text}</span>
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full ${colors[status] || 'bg-red-500'}"></div>
+                <span class="text-sm text-surface-600 dark:text-surface-400">${text}</span>
+            </div>
         `;
     }
 
@@ -827,59 +948,59 @@ function handleWebSocketMessage(data) {
 
         if (connectedApps.length > 0) {
             appsEl.innerHTML = connectedApps.map(app =>
-                `<span class="inline-block bg-lavender text-white text-xs px-2 py-1 rounded mt-1 mr-1">${app}</span>`
+                `<span class="inline-block bg-accent-100 dark:bg-accent-500/20 text-accent-700 dark:text-accent-300 text-xs px-2 py-0.5 rounded mr-1 mt-1">${app}</span>`
             ).join('');
-            toolsEl.textContent = `${toolCount} tools loaded`;
+            toolsEl.innerHTML = `<span class="text-emerald-500 font-medium">${toolCount}</span> tools loaded`;
         } else {
             appsEl.textContent = 'No apps connected';
             toolsEl.textContent = '0 tools loaded';
         }
     }
 
+    // Send Message
     function sendMessage() {
-    const input = document.getElementById('messageInput');
-    const content = input.value.trim();
+        const input = document.getElementById('messageInput');
+        const content = input.value.trim();
 
-    if (!content) return;
+        if (!content) return;
 
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-        showToast('Not connected to server', 'error');
-        return;
-    }
-
-    try {
-        const messageData = {
-            type: "start",
-            task: content,
-            files: []
-        };
-
-        // Add user message to UI ONCE
-        addMessage({
-            data: {
-                content: content,
-                source: 'user'
-            }
-        }, 'sent');
-
-        ws.send(JSON.stringify(messageData));
-        sentCount++;
-        updateStats();
-
-        if (currentChatId) {
-            saveMessageToChat(currentChatId, 'user', content);
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            showToast('Not connected to server', 'error');
+            return;
         }
 
-        document.getElementById('typingIndicator').classList.remove('hidden');
+        try {
+            const messageData = {
+                type: "start",
+                task: content,
+                files: []
+            };
 
-        input.value = '';
-        autoResize();
-        showToast('Message sent', 'success', 1000);
-    } catch (e) {
-        showToast(`Error: ${e.message}`, 'error');
+            addMessage({
+                data: {
+                    content: content,
+                    source: 'user'
+                }
+            }, 'sent');
+
+            ws.send(JSON.stringify(messageData));
+            sentCount++;
+            updateStats();
+
+            if (currentChatId) {
+                saveMessageToChat(currentChatId, 'user', content);
+            }
+
+            document.getElementById('typingIndicator').classList.remove('hidden');
+
+            input.value = '';
+            autoResize();
+        } catch (e) {
+            showToast(`Error: ${e.message}`, 'error');
+        }
     }
-}
 
+    // Message Display
     function addMessage(data, type, shouldSave = true) {
         const container = document.getElementById('messagesContainer');
         const emptyState = document.getElementById('emptyState');
@@ -889,7 +1010,7 @@ function handleWebSocketMessage(data) {
         }
 
         const messageDiv = document.createElement('div');
-        messageDiv.className = 'message-enter max-w-3xl mx-auto mb-6';
+        messageDiv.className = 'message-enter px-4 py-3';
 
         const isUser = type === 'sent' || (data.data && data.data.source === 'user');
         const content = extractMessageContent(data);
@@ -897,29 +1018,33 @@ function handleWebSocketMessage(data) {
 
         if (isUser) {
             messageDiv.innerHTML = `
-                <div class="flex items-start gap-3 flex-row-reverse">
-                    <div class="w-8 h-8 rounded-full bg-lavender flex items-center justify-center flex-shrink-0">
-                        <i data-lucide="user" class="w-4 h-4 text-white"></i>
-                    </div>
-                    <div class="flex-1">
-                        <div class="bg-lavender bg-opacity-10 dark:bg-opacity-20 rounded-2xl rounded-tr-sm px-4 py-3">
-                            <div class="text-gray-800 dark:text-gray-200">${formatContent(content)}</div>
+                <div class="max-w-3xl mx-auto">
+                    <div class="flex items-start gap-3 flex-row-reverse">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="user" class="w-4 h-4 text-white"></i>
                         </div>
-                        <div class="text-xs text-gray-400 mt-1 text-right">${timestamp}</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="bg-primary-500 text-white rounded-lg rounded-tr-none px-4 py-3">
+                                <div class="text-sm">${formatContent(content)}</div>
+                            </div>
+                            <div class="text-xs text-surface-400 mt-1.5 text-right">${timestamp}</div>
+                        </div>
                     </div>
                 </div>
             `;
         } else {
             messageDiv.innerHTML = `
-                <div class="flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-full bg-sky flex items-center justify-center flex-shrink-0">
-                        <i data-lucide="bot" class="w-4 h-4 text-gray-700"></i>
-                    </div>
-                    <div class="flex-1">
-                        <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl rounded-tl-sm px-4 py-3">
-                            <div class="text-gray-800 dark:text-gray-200 message-content">${formatContent(content)}</div>
+                <div class="max-w-3xl mx-auto">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="bot" class="w-4 h-4 text-white"></i>
                         </div>
-                        <div class="text-xs text-gray-400 mt-1">${timestamp}</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="bg-surface-50 dark:bg-surface-800 rounded-lg rounded-tl-none px-4 py-3 border border-surface-200 dark:border-surface-700">
+                                <div class="text-surface-700 dark:text-surface-200 prose-message message-content text-sm">${formatContent(content)}</div>
+                            </div>
+                            <div class="text-xs text-surface-400 mt-1.5">${timestamp}</div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -941,110 +1066,116 @@ function handleWebSocketMessage(data) {
         if (emptyState) emptyState.remove();
 
         const messageDiv = document.createElement('div');
-        messageDiv.className = 'message-enter max-w-3xl mx-auto mb-4';
+        messageDiv.className = 'message-enter px-4 py-2';
 
-        const colors = {
-            'info': 'bg-blue-50 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-700',
-            'warning': 'bg-yellow-50 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700',
-            'error': 'bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-200 dark:border-red-700',
-            'success': 'bg-green-50 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700'
+        const styles = {
+            'info': 'bg-primary-50 dark:bg-primary-500/10 text-primary-700 dark:text-primary-300 border-primary-200 dark:border-primary-500/20',
+            'warning': 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/20',
+            'error': 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 border-red-200 dark:border-red-500/20',
+            'success': 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/20'
+        };
+
+        const icons = {
+            'info': 'info',
+            'warning': 'alert-triangle',
+            'error': 'x-circle',
+            'success': 'check-circle'
         };
 
         messageDiv.innerHTML = `
-            <div class="rounded-lg border px-4 py-3 text-sm ${colors[level] || colors.info}">
-                ${formatContent(content)}
+            <div class="max-w-3xl mx-auto">
+                <div class="rounded-lg border px-4 py-2.5 text-sm ${styles[level] || styles.info} flex items-center gap-2">
+                    <i data-lucide="${icons[level] || 'info'}" class="w-4 h-4 flex-shrink-0"></i>
+                    <span>${formatContent(content)}</span>
+                </div>
             </div>
         `;
 
         container.appendChild(messageDiv);
+        lucide.createIcons();
         if (autoScroll) container.scrollTop = container.scrollHeight;
     }
 
     function addToolMessage(content, shouldSave = true) {
-    const container = document.getElementById('messagesContainer');
-    const emptyState = document.getElementById('emptyState');
-    if (emptyState) emptyState.remove();
+        const container = document.getElementById('messagesContainer');
+        const emptyState = document.getElementById('emptyState');
+        if (emptyState) emptyState.remove();
 
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'message-enter max-w-3xl mx-auto mb-6';
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message-enter px-4 py-3';
 
-    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // Try to parse JSON and format nicely
-    let formattedContent = content;
-    try {
-        const parsed = JSON.parse(content);
-
-        // Check if it's a Gmail result with messages
-        if (parsed.data && parsed.data.messages) {
-            formattedContent = formatGmailMessages(parsed.data.messages);
-        } else if (parsed.error) {
-            // Error response
-            formattedContent = `<div class="text-red-600 dark:text-red-400">
-                <strong>Error:</strong> ${escapeHtml(parsed.error)}
-            </div>`;
-        } else {
-            // Generic JSON formatting
-            formattedContent = `<pre class="bg-gray-900 text-gray-100 p-3 rounded-lg overflow-x-auto text-sm">${escapeHtml(JSON.stringify(parsed, null, 2))}</pre>`;
+        let formattedContent = content;
+        try {
+            const parsed = JSON.parse(content);
+            if (parsed.data && parsed.data.messages) {
+                formattedContent = formatGmailMessages(parsed.data.messages);
+            } else if (parsed.error) {
+                formattedContent = `<div class="text-red-600 dark:text-red-400"><strong>Error:</strong> ${escapeHtml(parsed.error)}</div>`;
+            } else {
+                formattedContent = `<pre class="bg-surface-900 text-surface-100 p-3 rounded-lg overflow-x-auto text-xs font-mono">${escapeHtml(JSON.stringify(parsed, null, 2))}</pre>`;
+            }
+        } catch (e) {
+            formattedContent = formatContent(content);
         }
-    } catch (e) {
-        // Not JSON, use as-is
-        formattedContent = formatContent(content);
-    }
 
-    messageDiv.innerHTML = `
-        <div class="flex items-start gap-3">
-            <div class="w-8 h-8 rounded-full bg-cyan-100 dark:bg-cyan-900 flex items-center justify-center flex-shrink-0">
-                <i data-lucide="wrench" class="w-4 h-4 text-cyan-600 dark:text-cyan-300"></i>
-            </div>
-            <div class="flex-1">
-                <div class="bg-cyan-50 dark:bg-cyan-900 border border-cyan-200 dark:border-cyan-700 rounded-2xl rounded-tl-sm px-4 py-3">
-                    <div class="text-cyan-900 dark:text-cyan-100 text-sm">${formattedContent}</div>
+        messageDiv.innerHTML = `
+            <div class="max-w-3xl mx-auto">
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="wrench" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/20 rounded-lg rounded-tl-none px-4 py-3">
+                            <div class="text-xs font-medium text-cyan-600 dark:text-cyan-400 mb-2 flex items-center gap-1">
+                                <i data-lucide="terminal" class="w-3 h-3"></i>
+                                Tool Output
+                            </div>
+                            <div class="text-cyan-800 dark:text-cyan-100 text-sm">${formattedContent}</div>
+                        </div>
+                        <div class="text-xs text-surface-400 mt-1.5">${timestamp}</div>
+                    </div>
                 </div>
-                <div class="text-xs text-gray-400 mt-1">${timestamp}</div>
-            </div>
-        </div>
-    `;
-
-    container.appendChild(messageDiv);
-    lucide.createIcons();
-
-    if (autoScroll) {
-        container.scrollTop = container.scrollHeight;
-    }
-}
-
-// Add this new helper function for Gmail messages
-function formatGmailMessages(messages) {
-    if (!Array.isArray(messages) || messages.length === 0) {
-        return '<p class="text-gray-500">No messages found</p>';
-    }
-
-    return messages.map((msg, idx) => {
-        // Extract text preview (strip HTML)
-        let preview = msg.messageText || '';
-        if (preview.length > 200) {
-            preview = preview.substring(0, 200) + '...';
-        }
-        // Remove HTML tags for preview
-        preview = preview.replace(/<[^>]*>/g, '').trim();
-
-        return `
-            <div class="bg-white dark:bg-gray-800 rounded-lg p-3 mb-2 border border-gray-200 dark:border-gray-600">
-                <div class="flex justify-between items-start mb-2">
-                    <strong class="text-sm">Email ${idx + 1}</strong>
-                    <span class="text-xs text-gray-500">${msg.messageId || 'N/A'}</span>
-                </div>
-                ${msg.subject ? `<div class="text-sm font-medium mb-1">${escapeHtml(msg.subject)}</div>` : ''}
-                ${msg.from ? `<div class="text-xs text-gray-600 dark:text-gray-400 mb-1">From: ${escapeHtml(msg.from)}</div>` : ''}
-                ${msg.labelIds ? `<div class="flex flex-wrap gap-1 mb-2">
-                    ${msg.labelIds.map(label => `<span class="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900 rounded">${label}</span>`).join('')}
-                </div>` : ''}
-                ${preview ? `<div class="text-xs text-gray-500 mt-2 italic">${escapeHtml(preview)}</div>` : ''}
             </div>
         `;
-    }).join('');
-}
+
+        container.appendChild(messageDiv);
+        lucide.createIcons();
+
+        if (autoScroll) {
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+
+    function formatGmailMessages(messages) {
+        if (!Array.isArray(messages) || messages.length === 0) {
+            return '<p class="text-surface-500">No messages found</p>';
+        }
+
+        return messages.map((msg, idx) => {
+            let preview = msg.messageText || '';
+            if (preview.length > 200) {
+                preview = preview.substring(0, 200) + '...';
+            }
+            preview = preview.replace(/<[^>]*>/g, '').trim();
+
+            return `
+                <div class="bg-white dark:bg-surface-800 rounded-lg p-3 mb-2 border border-surface-200 dark:border-surface-700">
+                    <div class="flex justify-between items-start mb-2">
+                        <strong class="text-sm text-surface-700 dark:text-surface-300">Email ${idx + 1}</strong>
+                        <span class="text-xs text-surface-400 font-mono">${msg.messageId ? msg.messageId.substring(0, 12) + '...' : 'N/A'}</span>
+                    </div>
+                    ${msg.subject ? `<div class="text-sm font-medium text-surface-800 dark:text-surface-200 mb-1">${escapeHtml(msg.subject)}</div>` : ''}
+                    ${msg.from ? `<div class="text-xs text-surface-500 mb-1">From: ${escapeHtml(msg.from)}</div>` : ''}
+                    ${msg.labelIds ? `<div class="flex flex-wrap gap-1 mb-2">
+                        ${msg.labelIds.map(label => `<span class="text-xs px-1.5 py-0.5 bg-surface-100 dark:bg-surface-700 rounded text-surface-600 dark:text-surface-400">${label}</span>`).join('')}
+                    </div>` : ''}
+                    ${preview ? `<div class="text-xs text-surface-500 mt-2">${escapeHtml(preview)}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
 
     function finalizeStreamingMessage() {
         if (currentStreamingMessage) {
@@ -1067,6 +1198,7 @@ function formatGmailMessages(messages) {
         }
     }
 
+    // Helpers
     function extractMessageContent(data) {
         if (typeof data === 'string') return data;
         if (data.task) return data.task;
@@ -1093,14 +1225,18 @@ function formatGmailMessages(messages) {
         if (typeof content === 'string') {
             let html = escapeHtml(content);
 
+            // Code blocks
             html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
-                return `<pre class="bg-gray-900 text-gray-100 p-3 rounded-lg mt-2 mb-2 overflow-x-auto text-sm"><code>${escapeHtml(code.trim())}</code></pre>`;
+                return `<pre class="bg-surface-900 text-surface-100 p-3 rounded-lg mt-2 mb-2 overflow-x-auto text-xs font-mono"><code>${escapeHtml(code.trim())}</code></pre>`;
             });
 
-            html = html.replace(/`([^`]+)`/g, '<code class="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>');
+            // Inline code
+            html = html.replace(/`([^`]+)`/g, '<code class="bg-surface-200 dark:bg-surface-700 px-1.5 py-0.5 rounded text-sm font-mono text-primary-600 dark:text-primary-400">$1</code>');
 
-            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Bold
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>');
 
+            // Line breaks
             html = html.replace(/\n/g, '<br>');
 
             return html;
@@ -1112,18 +1248,18 @@ function formatGmailMessages(messages) {
     }
 
     function formatObjectAsCard(obj) {
-        let html = '<div class="bg-white dark:bg-gray-700 rounded-lg p-3 space-y-2 text-sm border border-gray-200 dark:border-gray-600">';
+        let html = '<div class="bg-surface-100 dark:bg-surface-700 rounded-lg p-3 space-y-2 text-sm">';
 
         for (const [key, value] of Object.entries(obj)) {
             if (key === 'timestamp' || key === 'type') continue;
 
             html += '<div class="flex gap-2">';
-            html += `<span class="font-medium text-gray-600 dark:text-gray-400 min-w-[80px]">${escapeHtml(key)}:</span>`;
+            html += `<span class="font-medium text-surface-500 dark:text-surface-400 min-w-[80px]">${escapeHtml(key)}:</span>`;
 
             if (typeof value === 'object' && value !== null) {
-                html += `<span class="text-gray-800 dark:text-gray-200 flex-1">${JSON.stringify(value)}</span>`;
+                html += `<span class="text-surface-700 dark:text-surface-200 flex-1 font-mono text-xs">${JSON.stringify(value)}</span>`;
             } else {
-                html += `<span class="text-gray-800 dark:text-gray-200 flex-1">${escapeHtml(String(value))}</span>`;
+                html += `<span class="text-surface-700 dark:text-surface-200 flex-1">${escapeHtml(String(value))}</span>`;
             }
 
             html += '</div>';
@@ -1141,12 +1277,12 @@ function formatGmailMessages(messages) {
 
     function clearMessages() {
         document.getElementById('messagesContainer').innerHTML = `
-            <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center">
-                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-lavender to-sky flex items-center justify-center mb-4">
-                    <i data-lucide="sparkles" class="w-8 h-8 text-white"></i>
+            <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center px-4">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center mb-4 shadow-lg shadow-primary-500/20">
+                    <i data-lucide="message-square" class="w-8 h-8 text-white"></i>
                 </div>
-                <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2">Start a conversation</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 max-w-sm">Connect to the server and your Composio tools will be loaded automatically. Then start chatting!</p>
+                <h3 class="text-lg font-semibold text-surface-900 dark:text-white mb-2">Start a conversation</h3>
+                <p class="text-sm text-surface-500 dark:text-surface-400 max-w-sm">Connect to the server to load your Composio tools, then start chatting with the AI assistant.</p>
             </div>
         `;
 
@@ -1186,8 +1322,8 @@ function formatGmailMessages(messages) {
         } else {
             content = allMessages.map(msg => {
                 const type = msg.type === 'sent' ? 'User' : 'Assistant';
-                const content = extractMessageContent(msg.data);
-                return `[${new Date(msg.timestamp).toLocaleString()}] ${type}: ${JSON.stringify(content)}`;
+                const msgContent = extractMessageContent(msg.data);
+                return `[${new Date(msg.timestamp).toLocaleString()}] ${type}: ${JSON.stringify(msgContent)}`;
             }).join('\n\n');
         }
 
@@ -1213,10 +1349,10 @@ function formatGmailMessages(messages) {
         const toast = document.createElement('div');
 
         const styles = {
-            'success': 'bg-sky text-gray-800',
-            'error': 'bg-coral text-white',
-            'warning': 'bg-cream text-gray-800',
-            'info': 'bg-lavender text-white'
+            'success': 'bg-emerald-500 text-white',
+            'error': 'bg-red-500 text-white',
+            'warning': 'bg-amber-500 text-white',
+            'info': 'bg-primary-500 text-white'
         };
 
         const icons = {
@@ -1226,10 +1362,10 @@ function formatGmailMessages(messages) {
             'info': 'info'
         };
 
-        toast.className = `${styles[type] || styles.info} px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 min-w-64`;
+        toast.className = `${styles[type] || styles.info} px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 min-w-64 animate-slide-in-right`;
         toast.innerHTML = `
-            <i data-lucide="${icons[type] || 'info'}" class="w-4 h-4"></i>
-            <span class="flex-1">${message}</span>
+            <i data-lucide="${icons[type] || 'info'}" class="w-4 h-4 flex-shrink-0"></i>
+            <span class="flex-1 text-sm">${message}</span>
         `;
 
         container.appendChild(toast);
@@ -1238,8 +1374,8 @@ function formatGmailMessages(messages) {
         setTimeout(() => {
             toast.style.opacity = '0';
             toast.style.transform = 'translateX(100%)';
-            toast.style.transition = 'all 0.3s ease';
-            setTimeout(() => toast.remove(), 300);
+            toast.style.transition = 'all 0.2s ease';
+            setTimeout(() => toast.remove(), 200);
         }, duration);
     }
 </script>
